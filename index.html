@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>姜浩张超画室</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans SC', -apple-system, sans-serif;
+  background: linear-gradient(135deg, #FFFBEB 0%, #FFF7ED 50%, #FFFBEB 100%);
+  min-height:100vh; display:flex; align-items:center; justify-content:center;
+  color:#78350F;
+}
+.card {
+  background:#fff; border-radius:24px; padding:48px 40px; text-align:center;
+  box-shadow:0 8px 40px rgba(217,119,6,0.06); border:1px solid #FDE68A;
+  max-width:420px; width:90%;
+}
+.card h1 { font-size:26px; margin-bottom:8px; }
+.card p { font-size:14px; color:#A16207; margin-bottom:32px; }
+.links { display:flex; flex-direction:column; gap:12px; }
+.btn {
+  display:block; padding:14px 24px; border-radius:14px; font-size:15px; font-weight:600;
+  text-decoration:none; transition:all 0.2s; font-family:inherit;
+}
+.btn-student { background:#D97706; color:#fff; }
+.btn-student:hover { background:#92400E; transform:translateY(-1px); }
+.btn-admin { background:#fff; color:#D97706; border:2px solid #FDE68A; }
+.btn-admin:hover { border-color:#D97706; transform:translateY(-1px); }
+.footer { margin-top:32px; font-size:11px; color:#A16207; opacity:0.6; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🎨 姜浩张超画室</h1>
+  <p>学生反馈系统</p>
+  <div class="links">
+    <a href="student.html" class="btn btn-student">📝 学生端 · 填写问卷</a>
+    <a href="admin.html" class="btn btn-admin">🔐 管理后台 · 查看数据</a>
+  </div>
+  <div class="footer">请通过二维码或链接分享学生端</div>
+</div>
+</body>
+</html>

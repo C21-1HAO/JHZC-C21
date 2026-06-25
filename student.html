@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>姜浩张超画室 - 学生反馈问卷</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #D97706; --primary-dark: #92400E; --primary-light: #FEF3C7;
+    --accent: #F59E0B; --cta: #22C55E; --text: #78350F; --text-muted: #A16207;
+    --card-bg: #FFFFFF; --border: #FDE68A;
+    --score-active: #D97706; --score-hover: #FEF3C7; --score-inactive: #FFFBEB;
+    --danger: #EF4444; --collapse-bg: #FFFBEB;
+    --badge-head: #D97706;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: linear-gradient(135deg, #FFFBEB 0%, #FFF7ED 50%, #FFFBEB 100%);
+    color: var(--text); line-height: 1.6; min-height: 100vh;
+  }
+  body::before {
+    content:''; position:fixed; top:-50%; right:-20%;
+    width:600px; height:600px;
+    background:radial-gradient(circle,rgba(217,119,6,0.06) 0%,transparent 70%);
+    border-radius:50%; pointer-events:none; z-index:0;
+  }
+  body::after {
+    content:''; position:fixed; bottom:-30%; left:-10%;
+    width:500px; height:500px;
+    background:radial-gradient(circle,rgba(245,158,11,0.05) 0%,transparent 70%);
+    border-radius:50%; pointer-events:none; z-index:0;
+  }
+  .container { max-width:680px; margin:0 auto; padding:24px 16px 100px; position:relative; z-index:1; }
+  .header { text-align:center; padding:40px 20px 32px; }
+  .header-icon {
+    width:64px; height:64px; background:linear-gradient(135deg,var(--primary),var(--accent));
+    border-radius:20px; display:inline-flex; align-items:center; justify-content:center;
+    margin-bottom:20px; box-shadow:0 8px 24px rgba(217,119,6,0.2);
+  }
+  .header-icon svg { width:32px; height:32px; color:white; }
+  .header h1 { font-size:28px; font-weight:700; color:var(--text); margin-bottom:8px; }
+  .header p { font-size:15px; color:var(--text-muted); max-width:400px; margin:0 auto; }
+
+  .progress-wrap {
+    background:var(--card-bg); border:1px solid var(--border);
+    border-radius:16px; padding:16px 20px; margin-bottom:20px;
+    box-shadow:0 2px 8px rgba(217,119,6,0.04);
+  }
+  .progress-info { display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px; color:var(--text-muted); }
+  .progress-bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .progress-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--accent)); border-radius:3px; transition:width 0.4s ease; }
+
+  .section {
+    background:var(--card-bg); border:1px solid var(--border);
+    border-radius:16px; padding:24px; margin-bottom:16px;
+    box-shadow:0 2px 8px rgba(217,119,6,0.04);
+    transition:border-color 0.2s, box-shadow 0.2s;
+  }
+  .section:hover { border-color:var(--accent); box-shadow:0 4px 16px rgba(217,119,6,0.08); }
+  .section-title { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:600; color:var(--text); margin-bottom:20px; }
+  .section-icon {
+    width:36px; height:36px; background:var(--primary-light);
+    border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .section-icon svg { width:18px; height:18px; color:var(--primary); }
+
+  .form-group { margin-bottom:18px; }
+  .form-group:last-child { margin-bottom:0; }
+  .form-label { display:block; font-size:14px; font-weight:500; color:var(--text); margin-bottom:6px; }
+  .form-label .required { color:var(--danger); margin-left:2px; }
+  .form-input, .form-select, .form-textarea {
+    width:100%; padding:10px 14px; font-size:14px; font-family:inherit;
+    border:1.5px solid var(--border); border-radius:10px;
+    background:#FAFEFF; color:var(--text);
+    transition:border-color 0.2s, box-shadow 0.2s; outline:none;
+  }
+  .form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color:var(--primary); box-shadow:0 0 0 3px rgba(217,119,6,0.1); background:#FFF;
+  }
+  .form-select {
+    cursor:pointer; appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A16207' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center; padding-right:36px;
+  }
+  .form-textarea { min-height:100px; resize:vertical; }
+
+  /* Collapse */
+  .collapse-panel {
+    overflow:hidden; max-height:0; opacity:0;
+    transition:max-height 0.5s ease, opacity 0.3s ease, margin 0.3s ease;
+    margin-top:0;
+  }
+  .collapse-panel.open { max-height:4000px; opacity:1; margin-top:18px; }
+
+  /* Subject teacher card */
+  .subject-card {
+    background:var(--collapse-bg); border:1px solid var(--border);
+    border-radius:14px; padding:18px; margin-bottom:14px;
+    transition:border-color 0.2s;
+  }
+  .subject-card:hover { border-color:var(--accent); }
+  .subject-card:last-child { margin-bottom:0; }
+
+  .subject-header {
+    display:flex; align-items:center; gap:10px; margin-bottom:14px;
+    font-size:15px; font-weight:600; color:var(--text);
+  }
+  .subject-icon {
+    width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--primary),var(--accent));
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; flex-shrink:0;
+  }
+  .subject-teacher {
+    font-size:14px; font-weight:500; color:var(--primary);
+    background:var(--primary-light); padding:3px 10px; border-radius:6px;
+    display:inline-flex; align-items:center; gap:4px;
+  }
+  .badge-head {
+    font-size:10px; font-weight:600; background:var(--badge-head); color:#fff;
+    padding:1px 6px; border-radius:4px; margin-left:4px;
+  }
+
+  /* Score picker */
+  .score-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+  .score-row:last-child { margin-bottom:0; }
+  .score-label { font-size:13px; color:var(--text-muted); min-width:56px; white-space:nowrap; }
+  .score-picker { display:flex; flex-wrap:wrap; gap:4px; }
+  .score-btn {
+    width:34px; height:34px; border-radius:8px; border:1.5px solid var(--border);
+    background:var(--score-inactive); color:var(--text-muted);
+    font-size:13px; font-weight:600; cursor:pointer;
+    transition:all 0.15s ease; display:flex; align-items:center; justify-content:center;
+    font-family:inherit;
+  }
+  .score-btn:hover { border-color:var(--accent); background:var(--score-hover); color:var(--primary); transform:translateY(-1px); }
+  .score-btn.selected { border-color:var(--score-active); background:var(--score-active); color:#fff; box-shadow:0 2px 8px rgba(217,119,6,0.25); }
+  .score-hint { font-size:12px; color:var(--text-muted); margin-left:4px; white-space:nowrap; }
+
+  /* Buttons */
+  .submit-section {
+    position:fixed; bottom:0; left:0; right:0;
+    background:rgba(255,255,255,0.92); backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    border-top:1px solid var(--border); padding:16px 24px;
+    z-index:100; display:flex; justify-content:center; gap:12px;
+  }
+  .btn {
+    padding:12px 32px; border-radius:12px; font-size:15px;
+    font-weight:600; font-family:inherit; border:none; cursor:pointer;
+    transition:all 0.2s ease; display:inline-flex; align-items:center; gap:8px;
+  }
+  .btn-primary {
+    background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+    color:#fff; box-shadow:0 4px 14px rgba(217,119,6,0.3);
+    min-width:180px; justify-content:center;
+  }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(217,119,6,0.4); }
+  .btn-secondary { background:var(--card-bg); color:var(--text-muted); border:1.5px solid var(--border); }
+  .btn-secondary:hover { border-color:var(--accent); color:var(--primary); }
+
+  .toast {
+    position:fixed; top:20px; left:50%; transform:translateX(-50%);
+    z-index:200; padding:12px 24px; border-radius:12px; font-size:14px;
+    font-weight:500; box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    animation:toastIn 0.3s ease; pointer-events:none;
+  }
+  .toast-success { background:#166534; color:#DCFCE7; }
+  .toast-warning { background:#854D0E; color:#FEF3C7; }
+  @keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(-10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+  @keyframes toastOut { from{opacity:1} to{opacity:0} }
+  .footer-note { text-align:center; font-size:12px; color:var(--text-muted); padding:8px 0; opacity:0.7; }
+
+  /* Submitted state */
+  .submitted-screen { display:none; text-align:center; padding:80px 24px; max-width:680px; margin:0 auto; }
+  .submitted-screen.show { display:block; }
+  .submitted-screen .check-icon {
+    width:80px; height:80px; background:#DCFCE7; border-radius:50%;
+    display:inline-flex; align-items:center; justify-content:center; margin-bottom:24px;
+  }
+  .submitted-screen .check-icon svg { width:40px; height:40px; color:#22C55E; }
+  .submitted-screen h2 { font-size:22px; color:var(--text); margin-bottom:8px; }
+  .submitted-screen p { font-size:14px; color:var(--text-muted); margin-bottom:24px; }
+  .submitted-screen .submit-time { font-size:13px; color:var(--text-muted); background:var(--primary-light); display:inline-block; padding:6px 16px; border-radius:20px; }
+
+  @media (max-width:480px) {
+    .header { padding:24px 16px 20px; }
+    .header h1 { font-size:22px; }
+    .header-icon { width:52px; height:52px; border-radius:16px; }
+    .header-icon svg { width:26px; height:26px; }
+    .section { padding:18px 16px; border-radius:12px; }
+    .section-title { font-size:16px; }
+    .subject-card { padding:14px; }
+    .score-btn { width:28px; height:28px; font-size:12px; border-radius:6px; }
+    .btn { padding:10px 20px; font-size:14px; }
+    .btn-primary { min-width:120px; }
+    .submit-section { padding:12px 16px; gap:8px; }
+  }
+  @media (prefers-reduced-motion:reduce) {
+    * { transition-duration:0.01ms !important; }
+    .toast { animation:none; }
+    .collapse-panel { transition:none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header class="header">
+    <div class="header-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+      </svg>
+    </div>
+    <h1>姜浩张超画室 - 学生反馈问卷</h1>
+    <p>你的真实反馈是我们不断进步的动力，请认真填写</p>
+  </header>
+
+  <div class="progress-wrap">
+    <div class="progress-info"><span>填写进度</span><span id="progressText">0%</span></div>
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+
+  <form id="surveyForm">
+
+    <!-- ====== 一、教师评价（层级打开） ====== -->
+    <div class="section" id="sec-teacher">
+      <div class="section-title">
+        <div class="section-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/>
+          </svg>
+        </div>
+        一、对上课老师的评价
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">班级 <span class="required">*</span></label>
+        <select class="form-select" id="selClass" required>
+          <option value="">-- 请先选择班级 --</option>
+        </select>
+      </div>
+
+      <!-- 科目老师面板（选班级后展开） -->
+      <div class="collapse-panel" id="panelSubjects"></div>
+    </div>
+
+    <!-- ====== 二、饭堂 ====== -->
+    <div class="section" id="sec-canteen">
+      <div class="section-title">
+        <div class="section-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12M12.265 3.11a.375.375 0 1 1-.53 0L12 2.845l.265.265Zm-3 0a.375.375 0 1 1-.53 0L9 2.845l.265.265Zm6 0a.375.375 0 1 1-.53 0L15 2.845l.265.265Z"/>
+          </svg>
+        </div>
+        二、对饭堂的评价
+      </div>
+      <div class="form-group">
+        <label class="form-label">饭菜质量评分 <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:12px">1-10分</span></label>
+        <div class="score-row"><div class="score-picker" data-name="score_food"></div><span class="score-hint" id="hint-food">未评分</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">服务态度评分 <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:12px">1-10分</span></label>
+        <div class="score-row"><div class="score-picker" data-name="score_canteen_service"></div><span class="score-hint" id="hint-canteen_service">未评分</span></div>
+      </div>
+    </div>
+
+    <!-- ====== 三、宿舍 ====== -->
+    <div class="section" id="sec-dorm">
+      <div class="section-title">
+        <div class="section-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1m1.5.5-1.5-.5M6.75 7.364V3h-3v18m3-13.636 10.5-3.819"/>
+          </svg>
+        </div>
+        三、对宿舍的评价
+      </div>
+      <div class="form-group">
+        <label class="form-label">宿舍管理评分 <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:12px">1-10分</span></label>
+        <div class="score-row"><div class="score-picker" data-name="score_dorm_mgmt"></div><span class="score-hint" id="hint-dorm_mgmt">未评分</span></div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">宿管服务评分 <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:12px">1-10分</span></label>
+        <div class="score-row"><div class="score-picker" data-name="score_dorm_service"></div><span class="score-hint" id="hint-dorm_service">未评分</span></div>
+      </div>
+    </div>
+
+    <!-- ====== 四、建议 ====== -->
+    <div class="section" id="sec-suggestion">
+      <div class="section-title">
+        <div class="section-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/>
+          </svg>
+        </div>
+        四、个人建议
+      </div>
+      <div class="form-group">
+        <label class="form-label">你的建议或意见</label>
+        <textarea class="form-textarea" name="suggestion" placeholder="欢迎写下任何想对我们说的话……（如对教学、饭堂、宿舍等方面的改进建议）"></textarea>
+      </div>
+    </div>
+
+  </form>
+  <div class="footer-note">所有数据仅用于内部改进，你的反馈将严格保密</div>
+</div>
+
+<!-- 已提交提示 -->
+<div class="submitted-screen" id="submittedScreen">
+  <div class="check-icon">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+    </svg>
+  </div>
+  <h2>感谢你的反馈！</h2>
+  <p>你已提交过问卷，每台设备仅限填写一次</p>
+  <div class="submit-time" id="submittedTime"></div>
+</div>
+
+<div class="submit-section">
+  <button type="button" class="btn btn-secondary" onclick="resetForm()">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/>
+    </svg> 重新填写
+  </button>
+  <button type="button" class="btn btn-primary" onclick="submitForm()">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/>
+    </svg> 提交问卷
+  </button>
+</div>
+
+<script>
+// ==================== 班级-科目-老师 数据（可通过管理后台动态修改） ====================
+let CLASS_DATA = {
+  '清央国定制班': {
+    静物: { teacher: '周中希' },
+    色彩: { teacher: ['敖卓劲','孔何'] },
+    速写: { teacher: '叶高原', isHead: true },
+    头像: { teacher: '袁关琼' },
+  },
+  '定制班': {
+    静物: { teacher: '劳家斌' },
+    色彩: { teacher: ['周德涛','洪振中'] },
+    速写: { teacher: ['梁家捷','李云晓'] },
+    头像: { teacher: ['卢盛晓','蔡志坚'], isHead: true },
+  },
+  '超能1班': {
+    静物: { teacher: '郑祖聪', isHead: true },
+    色彩: { teacher: '李红亮' },
+    速写: { teacher: '任志达' },
+    头像: { teacher: '林佳玮' },
+  },
+  '超能2班': {
+    静物: { teacher: '朱传渠' },
+    色彩: { teacher: '邓长征' },
+    速写: { teacher: '劳杰成', isHead: true },
+    头像: { teacher: '卢优显' },
+  },
+  '超能3班': {
+    静物: { teacher: '何鸿海' },
+    色彩: { teacher: '鄢正端', isHead: true },
+    速写: { teacher: '黄卡迪' },
+    头像: { teacher: '何文翔' },
+  },
+  '超能4班': {
+    静物: { teacher: '李高技' },
+    色彩: { teacher: '陈傲' },
+    速写: { teacher: '庄金' },
+    头像: { teacher: '赵成圆', isHead: true },
+  },
+  '超重1班': {
+    静物: { teacher: '谢维俊' },
+    色彩: { teacher: '陈晓东' },
+    速写: { teacher: '林孟' },
+    头像: { teacher: '陈骏关', isHead: true },
+  },
+  '超重2班': {
+    静物: { teacher: '蔡梦龙' },
+    色彩: { teacher: '谢贯通', isHead: true },
+    速写: { teacher: '张仕清' },
+    头像: { teacher: '龙成桂' },
+  },
+  '全能班': {
+    静物: { teacher: '罗屏' },
+    色彩: { teacher: '苏海云' },
+    速写: { teacher: '陈铭均' },
+    头像: { teacher: '蒙富景', isHead: true },
+  },
+  '火箭1班': {
+    静物: { teacher: '吴泽鹏', isHead: true },
+    色彩: { teacher: '李聪' },
+    速写: { teacher: '林明宇' },
+    头像: { teacher: '冯南富' },
+  },
+  '火箭2班': {
+    静物: { teacher: '叶文澎', isHead: true },
+    色彩: { teacher: '梁天胜' },
+    速写: { teacher: '曾迪' },
+    头像: { teacher: '卓远忠' },
+  },
+  '丰泰定制班': {
+    静物: { teacher: '陈帆' },
+    色彩: { teacher: '莫华荣', isHead: true },
+    速写: { teacher: '郑国波' },
+    头像: { teacher: '吴登敏' },
+  },
+  '新兴华侨': {
+    静物: { teacher: '张树华' },
+    色彩: { teacher: '冯世龙' },
+    速写: { teacher: '梁斌' },
+    头像: { teacher: '张树华' },
+  },
+  '南海艺高': {
+    静物: { teacher: '何永强' },
+    色彩: { teacher: '陈淦全' },
+    速写: { teacher: '林志耿' },
+    头像: { teacher: ['殷坎良','胡少波'] },
+  },
+};
+
+const SUBJECTS = ['静物','色彩','速写','头像'];
+const SCORE_HINTS = ['😡极差','😟很差','😞较差','😕稍差','😐一般','🙂尚可','😊不错','😄良好','😍优秀','🏆满分'];
+
+// ==================== 初始化班级下拉 ====================
+function initClassSelect() {
+  const sel = document.getElementById('selClass');
+  for (let cls in CLASS_DATA) {
+    const opt = document.createElement('option');
+    opt.value = cls; opt.textContent = cls; sel.appendChild(opt);
+  }
+}
+
+// ==================== 生成1-10按钮 ====================
+function buildScoreButtons(pickerEl, name) {
+  for (let i = 1; i <= 10; i++) {
+    const btn = document.createElement('button');
+    btn.type = 'button'; btn.className = 'score-btn'; btn.textContent = i;
+    btn.dataset.value = i; btn.dataset.group = name;
+    btn.addEventListener('click', function() {
+      pickerEl.querySelectorAll('.score-btn').forEach(b => b.classList.remove('selected'));
+      this.classList.add('selected');
+      const hint = document.getElementById('hint-' + name);
+      if (hint) hint.textContent = SCORE_HINTS[i - 1] || '';
+      updateProgress();
+    });
+    pickerEl.appendChild(btn);
+  }
+}
+
+// ==================== 构建科目教师面板 ====================
+function buildSubjectPanel(clsName) {
+  const panel = document.getElementById('panelSubjects');
+  const data = CLASS_DATA[clsName];
+  if (!data) { panel.innerHTML = ''; return; }
+
+  let html = '';
+  SUBJECTS.forEach(sub => {
+    const subData = data[sub];
+    if (!subData) return;
+    const teacher = subData.teacher;
+    if (!teacher || (Array.isArray(teacher) && teacher.length === 0)) return;
+
+    // 把 teacher 统一为数组方便处理
+    const teachers = Array.isArray(teacher) ? teacher : [teacher];
+    const isHead = subData.isHead;
+    const subIdBase = clsName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_') + '_' + sub;
+
+    html += '<div class="subject-card">';
+    html += '<div class="subject-header">';
+    html += '<div class="subject-icon">'+sub.charAt(0)+'</div>';
+    html += '<span>'+sub+'</span>';
+    html += '</div>';
+
+    teachers.forEach((t, tIdx) => {
+      const prefix = 'score_' + subIdBase + '_t' + tIdx;
+
+      html += '<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed '+ (teachers.length > 1 ? 'var(--border)' : 'transparent') +'">';
+      // 老师名字
+      html += '<div style="margin-bottom:8px">';
+      html += '<span class="subject-teacher">'+t+(isHead?'<span class="badge-head">班主任</span>':'')+'</span>';
+      html += '</div>';
+
+      // 三个评分项
+      const items = [
+        { key: 'lecture', label: '讲课' },
+        { key: 'tutoring', label: '辅导' },
+        { key: 'review', label: '作业点评' },
+      ];
+      items.forEach(item => {
+        const name = prefix + '_' + item.key;
+        html += '<div class="score-row">';
+        html += '<span class="score-label">'+item.label+'</span>';
+        html += '<div class="score-picker" data-name="'+name+'"></div>';
+        html += '<span class="score-hint" id="hint-'+name+'">未评分</span>';
+        html += '</div>';
+      });
+
+      html += '</div>';
+    });
+
+    html += '</div>';
+  });
+
+  panel.innerHTML = html;
+
+  // 初始化每个评分区的按钮
+  panel.querySelectorAll('.score-picker').forEach(picker => {
+    buildScoreButtons(picker, picker.dataset.name);
+  });
+}
+
+// ==================== 班级切换 ====================
+document.getElementById('selClass').addEventListener('change', function() {
+  const cls = this.value;
+  const panel = document.getElementById('panelSubjects');
+  if (cls) {
+    buildSubjectPanel(cls);
+    panel.classList.add('open');
+    setTimeout(() => {
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 100);
+  } else {
+    panel.classList.remove('open');
+    panel.innerHTML = '';
+  }
+  updateProgress();
+});
+
+// ==================== 初始化全局打分按钮 ====================
+function initGlobalScores() {
+  ['score_food','score_canteen_service','score_dorm_mgmt','score_dorm_service'].forEach(name => {
+    const picker = document.querySelector('.score-picker[data-name="'+name+'"]');
+    if (picker) buildScoreButtons(picker, name);
+  });
+}
+
+// ==================== 进度计算 ====================
+function updateProgress() {
+  let total = 0, filled = 0;
+  const cls = document.getElementById('selClass').value;
+
+  // 班级
+  total++; if (cls) filled++;
+
+  if (cls) {
+    const data = CLASS_DATA[cls];
+    SUBJECTS.forEach(sub => {
+      const subData = data[sub];
+      if (!subData || !subData.teacher || (Array.isArray(subData.teacher) && subData.teacher.length === 0)) return;
+
+      const teacher = subData.teacher;
+      const teachers = Array.isArray(teacher) ? teacher : [teacher];
+      const subIdBase = cls.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_') + '_' + sub;
+
+      teachers.forEach((t, tIdx) => {
+        const prefix = 'score_' + subIdBase + '_t' + tIdx;
+        ['lecture','tutoring','review'].forEach(k => {
+          total++;
+          if (getScore(prefix + '_' + k)) filled++;
+        });
+      });
+    });
+  }
+
+  // 饭堂
+  ['score_food','score_canteen_service'].forEach(n => { total++; if (getScore(n)) filled++; });
+  // 宿舍
+  ['score_dorm_mgmt','score_dorm_service'].forEach(n => { total++; if (getScore(n)) filled++; });
+
+  const pct = total > 0 ? Math.round(filled / total * 100) : 0;
+  document.getElementById('progressText').textContent = pct + '%';
+  document.getElementById('progressFill').style.width = pct + '%';
+}
+
+function getScore(name) {
+  const btn = document.querySelector('.score-picker[data-name="'+name+'"] .score-btn.selected');
+  return btn ? parseInt(btn.dataset.value) : null;
+}
+
+// ==================== Toast ====================
+function showToast(msg, type, dur) {
+  type = type || 'success'; dur = dur || 3000;
+  const e = document.querySelector('.toast'); if (e) e.remove();
+  const t = document.createElement('div');
+  t.className = 'toast toast-' + type; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => { t.style.animation = 'toastOut 0.3s ease forwards'; setTimeout(() => t.remove(),300); }, dur);
+}
+
+// ==================== 提交 ====================
+function submitForm() {
+  const cls = document.getElementById('selClass').value;
+  if (!cls) { showToast('请先选择班级','warning'); return; }
+
+  const data = CLASS_DATA[cls];
+  let hasEmpty = false;
+
+  // 收集每个科目的评分
+  const subjectData = {};
+  SUBJECTS.forEach(sub => {
+    const subData = data[sub];
+    if (!subData || !subData.teacher || (Array.isArray(subData.teacher) && subData.teacher.length === 0)) return;
+
+    const subIdBase = cls.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_') + '_' + sub;
+    const teacher = subData.teacher;
+    const teachers = Array.isArray(teacher) ? teacher : [teacher];
+
+    const allLectures = [], allTutorings = [], allReviews = [];
+    teachers.forEach((tName, tIdx) => {
+      const prefix = 'score_' + subIdBase + '_t' + tIdx;
+      const l = getScore(prefix + '_lecture');
+      const t = getScore(prefix + '_tutoring');
+      const r = getScore(prefix + '_review');
+      if (!l || !t || !r) { hasEmpty = true; return; }
+      allLectures.push(l); allTutorings.push(t); allReviews.push(r);
+    });
+
+    // 老师名用逗号拼接
+    const teacherNames = teachers.join(',');
+    // 多老师取平均分
+    const avg = arr => Math.round(arr.reduce((a,b)=>a+b,0) / arr.length);
+    subjectData[sub] = {
+      teacher: teacherNames,
+      lecture: allLectures.length ? avg(allLectures) : 0,
+      tutoring: allTutorings.length ? avg(allTutorings) : 0,
+      review: allReviews.length ? avg(allReviews) : 0,
+    };
+  });
+
+  if (hasEmpty) { showToast('请完成所有科目的评分','warning'); return; }
+
+  // 饭堂/宿舍
+  ['score_food','score_canteen_service','score_dorm_mgmt','score_dorm_service'].forEach(n => {
+    if (!getScore(n)) { showToast('请完成所有评分项','warning'); hasEmpty = true; }
+  });
+  if (hasEmpty) return;
+
+  if (!confirm('确认提交问卷？')) return;
+
+  const all = loadRecords();
+  const ts = new Date().toLocaleString('zh-CN');
+  const record = {
+    id: Date.now(), timestamp: ts, 班级: cls,
+    静物老师: subjectData['静物']?.teacher || '', 静物讲课: subjectData['静物']?.lecture || 0, 静物辅导: subjectData['静物']?.tutoring || 0, 静物点评: subjectData['静物']?.review || 0,
+    色彩老师: subjectData['色彩']?.teacher || '', 色彩讲课: subjectData['色彩']?.lecture || 0, 色彩辅导: subjectData['色彩']?.tutoring || 0, 色彩点评: subjectData['色彩']?.review || 0,
+    速写老师: subjectData['速写']?.teacher || '', 速写讲课: subjectData['速写']?.lecture || 0, 速写辅导: subjectData['速写']?.tutoring || 0, 速写点评: subjectData['速写']?.review || 0,
+    头像老师: subjectData['头像']?.teacher || '', 头像讲课: subjectData['头像']?.lecture || 0, 头像辅导: subjectData['头像']?.tutoring || 0, 头像点评: subjectData['头像']?.review || 0,
+    饭菜评分: getScore('score_food'), 饭堂服务评分: getScore('score_canteen_service'),
+    宿舍管理评分: getScore('score_dorm_mgmt'), 宿管服务评分: getScore('score_dorm_service'),
+    建议: document.querySelector('[name="suggestion"]').value.trim() || '-',
+  };
+
+  all.push(record);
+  saveRecords(all);
+  markSubmitted();
+  showToast('提交成功！感谢你的反馈', 'success', 4000);
+
+  // 隐藏表单，显示已提交页面
+  setTimeout(() => {
+    document.querySelector('.container').style.display = 'none';
+    document.querySelector('.submit-section').style.display = 'none';
+    document.getElementById('submittedScreen').classList.add('show');
+    document.getElementById('submittedTime').textContent = '提交时间：' + new Date().toLocaleString('zh-CN');
+  }, 500);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ==================== 重置 ====================
+function resetForm() {
+  if (loadRecords().length > 0 && !confirm('确认重置？已保存记录不会丢失。')) return;
+  document.getElementById('selClass').value = '';
+  document.getElementById('panelSubjects').classList.remove('open');
+  document.getElementById('panelSubjects').innerHTML = '';
+  document.querySelectorAll('.score-picker .score-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.score-hint').forEach(h => h.textContent = '未评分');
+  document.querySelector('[name="suggestion"]').value = '';
+  updateProgress();
+}
+
+// ==================== 存储 ====================
+const SK = 'jhzc_survey_records';
+function loadRecords() { try{return JSON.parse(localStorage.getItem(SK)||'[]');}catch{return[];} }
+function saveRecords(r) { localStorage.setItem(SK,JSON.stringify(r)); }
+
+// ==================== 导出 ====================
+function exportData() {
+  const records = loadRecords();
+  if (!records.length) { showToast('暂无记录','warning'); return; }
+  const headers = ['提交时间','班级','静物老师','静物讲课','静物辅导','静物点评','色彩老师','色彩讲课','色彩辅导','色彩点评','速写老师','速写讲课','速写辅导','速写点评','头像老师','头像讲课','头像辅导','头像点评','饭菜评分','饭堂服务评分','宿舍管理评分','宿管服务评分','建议'];
+  const csv = '\uFEFF' + [headers.join(','), ...records.map(r => headers.map(h => {
+    const v = (r[h]!=null?r[h]:'-').toString();
+    return v.includes(',')||v.includes('"') ? '"'+v.replace(/"/g,'""')+'"' : v;
+  }).join(','))].join('\n');
+  const b = new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const u = URL.createObjectURL(b);
+  const a = document.createElement('a'); a.href = u;
+  const d = new Date();
+  a.download = '姜浩张超画室_学生反馈_'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.csv';
+  a.click(); URL.revokeObjectURL(u);
+  showToast('已导出 '+records.length+' 条记录');
+}
+
+// ==================== 启动 ====================
+// ==================== 配置加载 ====================
+function loadConfig() {
+  // 1. URL 参数优先: ?c=base64encodedJSON
+  const params = new URLSearchParams(window.location.search);
+  const encoded = params.get('c');
+  if (encoded) {
+    try {
+      const decoded = JSON.parse(decodeURIComponent(atob(encoded)));
+      if (decoded && typeof decoded === 'object') return decoded;
+    } catch {}
+  }
+  // 2. localStorage 配置
+  try {
+    const cfg = JSON.parse(localStorage.getItem('jhzc_survey_config'));
+    if (cfg && typeof cfg === 'object' && Object.keys(cfg).length > 0) return cfg;
+  } catch {}
+  // 3. 默认配置
+  return null;
+}
+
+// ==================== 防重复提交 ====================
+const SUBMITTED_KEY = 'jhzc_survey_submitted';
+
+function isSubmitted() {
+  // localStorage 检查
+  try {
+    const flag = localStorage.getItem(SUBMITTED_KEY);
+    if (flag) return true;
+  } catch {}
+  // Cookie 检查（更持久）
+  if (document.cookie.indexOf(SUBMITTED_KEY + '=1') !== -1) return true;
+  return false;
+}
+
+function markSubmitted() {
+  const now = new Date().toLocaleString('zh-CN');
+  try { localStorage.setItem(SUBMITTED_KEY, now); } catch {}
+  // 设置 Cookie，有效期 365 天
+  const d = new Date(); d.setFullYear(d.getFullYear() + 1);
+  document.cookie = SUBMITTED_KEY + '=1; expires=' + d.toUTCString() + '; path=/';
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  // 检查是否已提交
+  if (isSubmitted()) {
+    document.querySelector('.container').style.display = 'none';
+    document.getElementById('submittedScreen').classList.add('show');
+    document.querySelector('.submit-section').style.display = 'none';
+    const time = localStorage.getItem(SUBMITTED_KEY) || '未知时间';
+    document.getElementById('submittedTime').textContent = '提交时间：' + time;
+    return;
+  }
+
+  const cfg = loadConfig();
+  if (cfg) CLASS_DATA = cfg;
+
+  initClassSelect();
+  initGlobalScores();
+  updateProgress();
+  const r = loadRecords();
+  if (r.length) {
+    document.querySelector('.footer-note').textContent = '已有 ' + r.length + ' 条反馈记录 | 数据仅用于内部改进';
+  }
+});
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key==='Enter') { e.preventDefault(); submitForm(); }
+});
+</script>
+</body>
+</html>

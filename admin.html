@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>姜浩张超画室 - 管理后台</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --primary: #D97706; --primary-dark: #92400E; --primary-light: #FEF3C7;
+  --accent: #F59E0B; --text: #78350F; --text-muted: #A16207;
+  --card-bg: #FFFFFF; --border: #FDE68A;
+  --danger: #EF4444; --green: #22C55E;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: 'Noto Sans SC', -apple-system, sans-serif;
+  background: linear-gradient(135deg, #FFFBEB 0%, #FFF7ED 50%, #FFFBEB 100%);
+  color: var(--text); min-height:100vh; line-height:1.6;
+}
+.container { max-width:1200px; margin:0 auto; padding:20px 16px 60px; }
+
+/* Tabs */
+.tabs { display:flex; gap:0; margin-bottom:20px; border-bottom:2px solid var(--border); }
+.tab {
+  padding:10px 24px; font-size:14px; font-weight:600; cursor:pointer;
+  border:none; background:none; color:var(--text-muted); font-family:inherit;
+  border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s;
+}
+.tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.tab:hover { color:var(--primary); }
+
+/* Header */
+.header { display:flex; align-items:center; justify-content:space-between; padding:20px 0 12px; flex-wrap:wrap; gap:12px; }
+.header h1 { font-size:22px; font-weight:700; }
+.btn {
+  padding:8px 18px; border-radius:10px; font-size:13px; font-weight:600;
+  font-family:inherit; border:none; cursor:pointer; transition:all 0.2s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.btn-primary { background:var(--primary); color:#fff; }
+.btn-primary:hover { background:var(--primary-dark); }
+.btn-outline { background:#fff; color:var(--primary); border:1.5px solid var(--border); }
+.btn-outline:hover { border-color:var(--primary); }
+.btn-danger { background:#fff; color:var(--danger); border:1.5px solid #FECACA; }
+.btn-danger:hover { border-color:var(--danger); background:#FEF2F2; }
+.btn-sm { padding:5px 12px; font-size:12px; }
+
+/* Stats */
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px; margin-bottom:24px; }
+.stat-card {
+  background:var(--card-bg); border:1px solid var(--border); border-radius:14px;
+  padding:18px 20px; box-shadow:0 2px 8px rgba(217,119,6,0.04);
+}
+.stat-label { font-size:12px; color:var(--text-muted); margin-bottom:4px; }
+.stat-value { font-size:28px; font-weight:700; color:var(--primary); }
+.stat-sub { font-size:12px; color:var(--text-muted); margin-top:4px; }
+
+.section {
+  background:var(--card-bg); border:1px solid var(--border);
+  border-radius:14px; padding:20px; margin-bottom:16px;
+}
+.section-title { font-size:16px; font-weight:600; margin-bottom:14px; }
+
+.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.chart-box { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:20px; }
+.chart-box h3 { font-size:14px; font-weight:600; margin-bottom:12px; }
+.chart-box canvas { max-height:300px; }
+
+/* Table */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-size:13px; }
+th,td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+th { background:var(--primary-light); font-weight:600; }
+tr:hover { background:#FFFDF5; }
+.badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.badge-high { background:#DCFCE7; color:#166534; }
+.badge-mid { background:#FEF3C7; color:#92400E; }
+.badge-low { background:#FEE2E2; color:#991B1B; }
+
+/* Config Panel */
+.config-class {
+  border:1px solid var(--border); border-radius:12px; margin-bottom:12px; overflow:hidden;
+  transition:border-color 0.2s;
+}
+.config-class:hover { border-color:var(--accent); }
+.config-class-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; background:var(--primary-light); cursor:pointer;
+  font-weight:600; font-size:14px;
+}
+.config-class-body { padding:16px; display:none; }
+.config-class-body.open { display:block; background:#FFFBFF; }
+.config-subject {
+  display:flex; align-items:center; gap:10px; padding:10px 0;
+  border-bottom:1px dashed var(--border); flex-wrap:wrap;
+}
+.config-subject:last-child { border-bottom:none; }
+.config-subject-label { min-width:48px; font-weight:500; font-size:13px; }
+.config-input {
+  flex:1; min-width:180px; padding:6px 10px; border:1.5px solid var(--border);
+  border-radius:8px; font-size:13px; font-family:inherit; outline:none;
+}
+.config-input:focus { border-color:var(--primary); }
+.config-check { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-muted); cursor:pointer; }
+.config-sub { font-size:11px; color:var(--text-muted); }
+
+.search-bar { margin-bottom:14px; display:flex; gap:8px; }
+.search-input {
+  flex:1; padding:8px 14px; border:1.5px solid var(--border); border-radius:10px;
+  font-size:13px; font-family:inherit; outline:none; max-width:300px;
+}
+.search-input:focus { border-color:var(--primary); }
+
+/* Link gen */
+.link-box {
+  background:var(--primary-light); border-radius:12px; padding:16px;
+  display:flex; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap;
+}
+.link-url {
+  flex:1; min-width:200px; padding:8px 12px; background:#fff;
+  border:1px solid var(--border); border-radius:8px; font-size:12px;
+  word-break:break-all; font-family:monospace; color:var(--text);
+}
+.qr-wrap { text-align:center; margin-top:20px; }
+.qr-wrap canvas { border:8px solid #fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+
+/* Modal */
+.modal-overlay {
+  display:none; position:fixed; top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center;
+}
+.modal-overlay.show { display:flex; }
+.modal {
+  background:#fff; border-radius:16px; padding:28px; max-width:500px; width:90%;
+  box-shadow:0 16px 48px rgba(0,0,0,0.15);
+}
+.modal h2 { font-size:18px; margin-bottom:16px; }
+.modal input,.modal textarea {
+  width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:10px;
+  font-size:14px; font-family:inherit; margin-bottom:12px; resize:vertical;
+}
+.modal textarea { min-height:200px; }
+
+.toast {
+  position:fixed; top:20px; left:50%; transform:translateX(-50%);
+  z-index:300; padding:10px 22px; border-radius:10px; font-size:13px; font-weight:500;
+  box-shadow:0 4px 16px rgba(0,0,0,0.1); animation:toastIn 0.3s ease;
+}
+.toast-success { background:#166534; color:#DCFCE7; }
+.toast-warning { background:#854D0E; color:#FEF3C7; }
+@keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(-10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+
+.login-wrap {
+  display:flex; align-items:center; justify-content:center; min-height:100vh;
+  background:linear-gradient(135deg,#FFFBEB 0%,#FFF7ED 50%,#FFFBEB 100%);
+}
+.login-card {
+  background:#fff; border-radius:20px; padding:40px; width:360px;
+  box-shadow:0 8px 32px rgba(217,119,6,0.08); border:1px solid var(--border); text-align:center;
+}
+.login-card h1 { font-size:22px; margin-bottom:8px; }
+.login-card p { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
+.login-card input {
+  width:100%; padding:12px 16px; border:1.5px solid var(--border); border-radius:10px;
+  font-size:14px; font-family:inherit; text-align:center; margin-bottom:12px; outline:none;
+}
+.login-card input:focus { border-color:var(--primary); }
+
+.empty-state { text-align:center; padding:40px 20px; color:var(--text-muted); }
+.empty-state svg { width:64px; height:64px; color:var(--border); margin-bottom:12px; }
+
+@media (max-width:768px) {
+  .charts-row { grid-template-columns:1fr; }
+  .stats-grid { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- 登录 -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-card">
+    <h1>🔐 管理后台</h1>
+    <p>姜浩张超画室 · 学生反馈系统</p>
+    <input type="password" id="pwdInput" placeholder="请输入管理密码" autofocus>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="checkLogin()">进入后台</button>
+    <p style="font-size:11px;color:var(--text-muted);margin-top:16px">默认密码: admin888</p>
+  </div>
+</div>
+
+<!-- 主界面 -->
+<div id="mainScreen" style="display:none">
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>姜浩张超画室 · 管理后台</h1>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:2px">学生反馈数据总览 & 问卷配置</div>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="logout()">退出</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard',this)">📊 数据看板</button>
+    <button class="tab" onclick="switchTab('config',this)">⚙️ 问卷配置</button>
+  </div>
+
+  <!-- ============ TAB: 数据看板 ============ -->
+  <div id="tab-dashboard">
+    <div class="stats-grid" id="statsCards"></div>
+    <div class="charts-row">
+      <div class="chart-box"><h3>各科目平均评分</h3><canvas id="chartSubject"></canvas></div>
+      <div class="chart-box"><h3>班级提交分布</h3><canvas id="chartClass"></canvas></div>
+    </div>
+    <div class="charts-row">
+      <div class="chart-box"><h3>三餐宿舍评分趋势</h3><canvas id="chartOther"></canvas></div>
+      <div class="chart-box"><h3>教师评分排行 TOP10</h3><canvas id="chartTeacher"></canvas></div>
+    </div>
+    <div class="section">
+      <div class="section-title">📋 提交记录</div>
+      <div class="search-bar">
+        <input class="search-input" id="searchInput" placeholder="搜索 班级 / 老师名..." oninput="renderTable()">
+        <span style="font-size:12px;color:var(--text-muted);align-self:center" id="tableCount"></span>
+        <button class="btn btn-outline btn-sm" onclick="exportCSV()">📤 导出CSV</button>
+        <button class="btn btn-outline btn-sm" onclick="showImport()">📥 导入</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmClear()">🗑 清空</button>
+      </div>
+      <div class="table-wrap">
+        <table id="dataTable"><thead><tr>
+          <th>提交时间</th><th>班级</th>
+          <th>静物老师</th><th>静物讲课</th><th>静物辅导</th><th>静物点评</th>
+          <th>色彩老师</th><th>色彩讲课</th><th>色彩辅导</th><th>色彩点评</th>
+          <th>速写老师</th><th>速写讲课</th><th>速写辅导</th><th>速写点评</th>
+          <th>头像老师</th><th>头像讲课</th><th>头像辅导</th><th>头像点评</th>
+          <th>饭菜</th><th>饭堂服务</th><th>宿舍管理</th><th>宿管服务</th>
+          <th>建议</th>
+        </tr></thead><tbody></tbody></table>
+        <div class="empty-state" id="emptyTable">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
+          <p>暂无数据</p><p style="font-size:12px">等待学生提交问卷后，数据将显示在此处</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ TAB: 问卷配置 ============ -->
+  <div id="tab-config" style="display:none">
+    <div class="section">
+      <div class="section-title" style="display:flex;justify-content:space-between;align-items:center">
+        <span>📝 班级 & 教师配置</span>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="addClass()">+ 新增班级</button>
+          <button class="btn btn-outline btn-sm" onclick="saveConfig()">💾 保存配置</button>
+          <button class="btn btn-outline btn-sm" onclick="resetConfig()">🔄 恢复默认</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+        在此修改班级和老师信息，保存后生成新的学生端链接。多个老师请用英文逗号分隔（如：周德涛,洪振中）。
+      </p>
+      <div id="configList"></div>
+    </div>
+
+    <!-- 生成链接 -->
+    <div class="section">
+      <div class="section-title">🔗 生成学生端链接</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+        先点击上方"保存配置"，再点击下方"生成链接"。学生会通过此链接看到最新的班级和老师列表。
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="genStudentLink()">🔗 生成学生端链接</button>
+        <button class="btn btn-outline" onclick="genQRCode()">📱 生成二维码</button>
+        <button class="btn btn-outline" onclick="copyLink()">📋 复制链接</button>
+      </div>
+      <div class="link-box">
+        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">学生端链接：</span>
+        <span class="link-url" id="studentLink">尚未生成</span>
+      </div>
+      <div class="qr-wrap" id="qrCodeWrap" style="display:none"></div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<!-- 导入弹窗 -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <h2>📥 导入数据</h2>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">粘贴 JSON 或拖入 CSV。导入将合并到现有数据。</p>
+    <textarea id="importText" placeholder="粘贴 JSON 数据..."></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn btn-outline" onclick="hideImport()">取消</button>
+      <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="importCSV(event)">
+      <button class="btn btn-outline" onclick="document.getElementById('csvFileInput').click()">选择CSV</button>
+      <button class="btn btn-primary" onclick="doImport()">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+// ==================== 密码 ====================
+const ADMIN_PWD = 'admin888';
+function checkLogin() {
+  if (document.getElementById('pwdInput').value === ADMIN_PWD) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    initDashboard();
+  } else { showToast('密码错误','warning'); }
+}
+function logout() {
+  document.getElementById('mainScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('pwdInput').value = '';
+}
+
+// ==================== 数据层 ====================
+const DATA_KEY = 'jhzc_survey_records';
+const CONFIG_KEY = 'jhzc_survey_config';
+function loadRecords() { try{return JSON.parse(localStorage.getItem(DATA_KEY)||'[]');}catch{return[];} }
+function saveRecords(r) { localStorage.setItem(DATA_KEY, JSON.stringify(r)); }
+function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
+function saveConfigToStorage(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
+
+// ==================== 默认班级配置 ====================
+const DEFAULT_CONFIG = {
+  '清央国定制班':{静物:{teacher:'周中希'},色彩:{teacher:['敖卓劲','孔何']},速写:{teacher:'叶高原',isHead:true},头像:{teacher:'袁关琼'}},
+  '定制班':{静物:{teacher:'劳家斌'},色彩:{teacher:['周德涛','洪振中']},速写:{teacher:['梁家捷','李云晓']},头像:{teacher:['卢盛晓','蔡志坚'],isHead:true}},
+  '超能1班':{静物:{teacher:'郑祖聪',isHead:true},色彩:{teacher:'李红亮'},速写:{teacher:'任志达'},头像:{teacher:'林佳玮'}},
+  '超能2班':{静物:{teacher:'朱传渠'},色彩:{teacher:'邓长征'},速写:{teacher:'劳杰成',isHead:true},头像:{teacher:'卢优显'}},
+  '超能3班':{静物:{teacher:'何鸿海'},色彩:{teacher:'鄢正端',isHead:true},速写:{teacher:'黄卡迪'},头像:{teacher:'何文翔'}},
+  '超能4班':{静物:{teacher:'李高技'},色彩:{teacher:'陈傲'},速写:{teacher:'庄金'},头像:{teacher:'赵成圆',isHead:true}},
+  '超重1班':{静物:{teacher:'谢维俊'},色彩:{teacher:'陈晓东'},速写:{teacher:'林孟'},头像:{teacher:'陈骏关',isHead:true}},
+  '超重2班':{静物:{teacher:'蔡梦龙'},色彩:{teacher:'谢贯通',isHead:true},速写:{teacher:'张仕清'},头像:{teacher:'龙成桂'}},
+  '全能班':{静物:{teacher:'罗屏'},色彩:{teacher:'苏海云'},速写:{teacher:'陈铭均'},头像:{teacher:'蒙富景',isHead:true}},
+  '火箭1班':{静物:{teacher:'吴泽鹏',isHead:true},色彩:{teacher:'李聪'},速写:{teacher:'林明宇'},头像:{teacher:'冯南富'}},
+  '火箭2班':{静物:{teacher:'叶文澎',isHead:true},色彩:{teacher:'梁天胜'},速写:{teacher:'曾迪'},头像:{teacher:'卓远忠'}},
+  '丰泰定制班':{静物:{teacher:'陈帆'},色彩:{teacher:'莫华荣',isHead:true},速写:{teacher:'郑国波'},头像:{teacher:'吴登敏'}},
+  '新兴华侨':{静物:{teacher:'张树华'},色彩:{teacher:'冯世龙'},速写:{teacher:'梁斌'},头像:{teacher:'张树华'}},
+  '南海艺高':{静物:{teacher:'何永强'},色彩:{teacher:'陈淦全'},速写:{teacher:'林志耿'},头像:{teacher:['殷坎良','胡少波']}},
+};
+const SUBJECTS = ['静物','色彩','速写','头像'];
+
+function getConfig() { return loadConfig() || JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+
+// ==================== Tabs ====================
+function switchTab(tab, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-dashboard').style.display = tab==='dashboard'?'block':'none';
+  document.getElementById('tab-config').style.display = tab==='config'?'block':'none';
+  if (tab === 'config') renderConfigPanel();
+  if (tab === 'dashboard') initDashboard();
+}
+
+// ==================== Toast ====================
+function showToast(msg, type) {
+  const e = document.querySelector('.toast'); if(e) e.remove();
+  const t = document.createElement('div');
+  t.className = 'toast toast-'+(type||'success'); t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2500);
+}
+
+// ==================== 仪表盘 ====================
+function initDashboard() {
+  renderStats(); renderTable(); renderCharts();
+}
+
+function renderStats() {
+  const records = loadRecords();
+  const total = records.length;
+  const classes = [...new Set(records.map(r=>r['班级']))].length;
+  // 提取所有老师名（逗号分隔的需拆分）
+  const allTeachers = new Set();
+  records.forEach(r => {
+    ['静物老师','色彩老师','速写老师','头像老师'].forEach(k => {
+      (r[k]||'').split(',').forEach(t => { if (t.trim()) allTeachers.add(t.trim()); });
+    });
+  });
+  const teacherCount = allTeachers.size;
+  const scoreFields = ['静物讲课','静物辅导','静物点评','色彩讲课','色彩辅导','色彩点评','速写讲课','速写辅导','速写点评','头像讲课','头像辅导','头像点评','饭菜评分','饭堂服务评分','宿舍管理评分','宿管服务评分'];
+  const allScores = records.flatMap(r=>scoreFields.map(k=>Number(r[k])).filter(n=>!isNaN(n)&&n>0));
+  const avg = allScores.length?(allScores.reduce((a,b)=>a+b,0)/allScores.length).toFixed(1):'-';
+  const teacherScoreFields = ['静物讲课','静物辅导','静物点评','色彩讲课','色彩辅导','色彩点评','速写讲课','速写辅导','速写点评','头像讲课','头像辅导','头像点评'];
+  const teacherScores = records.flatMap(r=>teacherScoreFields.map(k=>Number(r[k])).filter(n=>!isNaN(n)&&n>0));
+  const tAvg = teacherScores.length?(teacherScores.reduce((a,b)=>a+b,0)/teacherScores.length).toFixed(1):'-';
+  const today = new Date().toLocaleDateString('zh-CN');
+  const todayCount = records.filter(r=>r['提交时间']&&r['提交时间'].startsWith(today)).length;
+  const html = [
+    {label:'总提交数',value:total,sub:todayCount+' 人今日'},
+    {label:'涉及班级',value:classes,sub:'个班级'},
+    {label:'涉及教师',value:teacherCount,sub:'位老师'},
+    {label:'总平均分',value:avg,sub:'全部评分项'},
+    {label:'教师均分',value:tAvg,sub:'四科评分'},
+  ].map(c=>'<div class="stat-card"><div class="stat-label">'+c.label+'</div><div class="stat-value">'+c.value+'</div><div class="stat-sub">'+c.sub+'</div></div>').join('');
+  document.getElementById('statsCards').innerHTML = html;
+}
+
+function renderTable() {
+  const records = loadRecords();
+  const q = (document.getElementById('searchInput')?.value||'').toLowerCase();
+  const filtered = q?records.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q))):records;
+  document.getElementById('tableCount').textContent = '共 '+filtered.length+' 条';
+  const empty = document.getElementById('emptyTable');
+  const tbody = document.querySelector('#dataTable tbody');
+  if (!filtered.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  tbody.innerHTML = filtered.slice().reverse().map(r=>{
+    const sb = s => { const n=Number(s); if(isNaN(n)||n<=0) return '<span class="badge">-</span>'; return '<span class="badge '+(n>=8?'badge-high':n>=5?'badge-mid':'badge-low')+'">'+n+'</span>'; };
+    return '<tr>' +
+      '<td>'+(r['提交时间']||'-')+'</td><td>'+(r['班级']||'-')+'</td>' +
+      '<td>'+(r['静物老师']||'-')+'</td><td>'+sb(r['静物讲课'])+'</td><td>'+sb(r['静物辅导'])+'</td><td>'+sb(r['静物点评'])+'</td>' +
+      '<td>'+(r['色彩老师']||'-')+'</td><td>'+sb(r['色彩讲课'])+'</td><td>'+sb(r['色彩辅导'])+'</td><td>'+sb(r['色彩点评'])+'</td>' +
+      '<td>'+(r['速写老师']||'-')+'</td><td>'+sb(r['速写讲课'])+'</td><td>'+sb(r['速写辅导'])+'</td><td>'+sb(r['速写点评'])+'</td>' +
+      '<td>'+(r['头像老师']||'-')+'</td><td>'+sb(r['头像讲课'])+'</td><td>'+sb(r['头像辅导'])+'</td><td>'+sb(r['头像点评'])+'</td>' +
+      '<td>'+sb(r['饭菜评分'])+'</td><td>'+sb(r['饭堂服务评分'])+'</td><td>'+sb(r['宿舍管理评分'])+'</td><td>'+sb(r['宿管服务评分'])+'</td>' +
+      '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis" title="'+(r['建议']||'')+'">'+(r['建议']||'-')+'</td></tr>';
+  }).join('');
+}
+
+let charts = {};
+function renderCharts() {
+  const records = loadRecords();
+  Object.values(charts).forEach(c=>c.destroy()); charts={};
+  if(!records.length) return;
+
+  // 各科目平均分（讲课+辅导+点评的平均）
+  const subjData={};
+  ['静物','色彩','速写','头像'].forEach(sub=>{
+    const vals=records.flatMap(r=>[r[sub+'讲课'],r[sub+'辅导'],r[sub+'点评']].map(Number).filter(n=>!isNaN(n)&&n>0));
+    subjData[sub]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;
+  });
+  charts.chartSubject = new Chart(document.getElementById('chartSubject'),{
+    type:'bar',data:{labels:Object.keys(subjData),datasets:[{label:'平均分',data:Object.values(subjData),backgroundColor:'#F59E0B',borderRadius:6}]},
+    options:{scales:{y:{beginAtZero:true,max:10,ticks:{stepSize:2}}},plugins:{legend:{display:false}}}
+  });
+
+  const classCount={};
+  records.forEach(r=>{const c=r['班级']||'未知';classCount[c]=(classCount[c]||0)+1;});
+  const clsSorted=Object.entries(classCount).sort((a,b)=>b[1]-a[1]);
+  charts.chartClass = new Chart(document.getElementById('chartClass'),{
+    type:'bar',data:{labels:clsSorted.map(e=>e[0]),datasets:[{label:'提交数',data:clsSorted.map(e=>e[1]),backgroundColor:'#D97706',borderRadius:6}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}}}
+  });
+
+  const otherData={};
+  ['饭菜评分','饭堂服务评分','宿舍管理评分','宿管服务评分'].forEach(k=>{
+    const vals=records.map(r=>Number(r[k])).filter(n=>!isNaN(n)&&n>0);
+    otherData[k.replace('评分','')]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;
+  });
+  charts.chartOther = new Chart(document.getElementById('chartOther'),{
+    type:'bar',data:{labels:Object.keys(otherData),datasets:[{label:'平均分',data:Object.values(otherData),backgroundColor:['#F59E0B','#D97706','#92400E','#78350F'],borderRadius:6}]},
+    options:{scales:{y:{beginAtZero:true,max:10,ticks:{stepSize:2}}},plugins:{legend:{display:false}}}
+  });
+
+  // 教师评分排行：从每条记录中把老师名拆分，平均分计算
+  const teacherScores={};
+  records.forEach(r=>{
+    ['静物','色彩','速写','头像'].forEach(sub=>{
+      const teachers = (r[sub+'老师']||'').split(',').map(t=>t.trim()).filter(Boolean);
+      teachers.forEach(tName => {
+        ['讲课','辅导','点评'].forEach(k=>{
+          const v=Number(r[sub+k]); if(!isNaN(v)&&v>0){
+            if(!teacherScores[tName]) teacherScores[tName]=[];
+            teacherScores[tName].push(v);
+          }
+        });
+      });
+    });
+  });
+  const teacherAvg=Object.entries(teacherScores).map(([n,s])=>({name:n,avg:s.reduce((a,b)=>a+b,0)/s.length})).sort((a,b)=>b.avg-a.avg).slice(0,10);
+  charts.chartTeacher = new Chart(document.getElementById('chartTeacher'),{
+    type:'bar',data:{labels:teacherAvg.map(e=>e.name),datasets:[{label:'教师均分',data:teacherAvg.map(e=>e.avg.toFixed(1)),backgroundColor:'#F59E0B',borderRadius:6}]},
+    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,max:10,ticks:{stepSize:2}}}}
+  });
+}
+
+// ==================== 导入导出 ====================
+function exportCSV() {
+  const records=loadRecords(); if(!records.length){showToast('暂无数据','warning');return;}
+  const headers=['提交时间','班级','静物老师','静物讲课','静物辅导','静物点评','色彩老师','色彩讲课','色彩辅导','色彩点评','速写老师','速写讲课','速写辅导','速写点评','头像老师','头像讲课','头像辅导','头像点评','饭菜评分','饭堂服务评分','宿舍管理评分','宿管服务评分','建议'];
+  const csv='\uFEFF'+[headers.join(','),...records.map(r=>headers.map(h=>{
+    const v=(r[h]!=null?r[h]:'-').toString();
+    return v.includes(',')||v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;
+  }).join(','))].join('\n');
+  const b=new Blob([csv],{type:'text/csv;charset=utf-8'});
+  const u=URL.createObjectURL(b); const a=document.createElement('a');a.href=u;
+  const d=new Date();
+  a.download='姜浩张超画室_反馈数据_'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.csv';
+  a.click();URL.revokeObjectURL(u);showToast('已导出 '+records.length+' 条');
+}
+
+function showImport(){document.getElementById('importModal').classList.add('show');}
+function hideImport(){document.getElementById('importModal').classList.remove('show');document.getElementById('importText').value='';}
+function doImport(){
+  const text=document.getElementById('importText').value.trim();
+  if(!text){showToast('请粘贴数据','warning');return;}
+  try{const data=JSON.parse(text);if(!Array.isArray(data))throw new Error();
+    saveRecords([...loadRecords(),...data]);showToast('导入成功，共 '+(loadRecords().length)+' 条');hideImport();initDashboard();
+  }catch{showToast('格式错误，需 JSON 数组','warning');}
+}
+function importCSV(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const lines=ev.target.result.split('\n').filter(l=>l.trim());if(lines.length<2){showToast('CSV为空','warning');return;}
+    const headers=lines[0].replace(/^\uFEFF/,'').split(',').map(h=>h.replace(/"/g,'').trim());
+    const records=[];
+    for(let i=1;i<lines.length;i++){
+      const vals=parseCSVLine(lines[i]);if(vals.length<headers.length)continue;
+      const r={};headers.forEach((h,idx)=>{r[h]=vals[idx]||'';});records.push(r);
+    }
+    saveRecords([...loadRecords(),...records]);showToast('CSV导入成功，共 '+records.length+' 条');initDashboard();
+  };
+  reader.readAsText(file,'UTF-8');e.target.value='';
+}
+function parseCSVLine(l){const r=[];let c='',q=false;for(let ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;}
+function confirmClear(){
+  if(!confirm('确定清空所有数据？不可恢复！'))return;
+  if(!confirm('再次确认：清空全部 '+loadRecords().length+' 条？'))return;
+  saveRecords([]);showToast('已清空');initDashboard();
+}
+
+// ==================== 问卷配置面板 ====================
+let editingConfig = null;
+
+function renderConfigPanel() {
+  editingConfig = getConfig();
+  const list = document.getElementById('configList');
+  let html = '';
+  for (let cls in editingConfig) {
+    html += '<div class="config-class">';
+    html += '<div class="config-class-header" onclick="this.nextElementSibling.classList.toggle(\'open\')">';
+    html += '<span>📘 '+cls+'</span>';
+    html += '<button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteClass(\''+cls.replace(/'/g,"\\'")+'\')">删除</button>';
+    html += '</div>';
+    html += '<div class="config-class-body">';
+    SUBJECTS.forEach(sub => {
+      const sd = editingConfig[cls][sub] || { teacher: '' };
+      const teachers = Array.isArray(sd.teacher) ? sd.teacher.join(',') : (sd.teacher || '');
+      html += '<div class="config-subject">';
+      html += '<span class="config-subject-label">'+sub+'</span>';
+      html += '<input class="config-input" value="'+teachers.replace(/"/g,'&quot;')+'" data-cls="'+cls.replace(/"/g,'&quot;')+'" data-sub="'+sub+'" placeholder="老师名，多个用逗号分隔" onchange="onConfigChange()">';
+      html += '<label class="config-check"><input type="checkbox" '+(sd.isHead?'checked':'')+' data-cls="'+cls.replace(/"/g,'&quot;')+'" data-sub="'+sub+'" onchange="onConfigChange()"> 班主任</label>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+  html += '<button class="btn btn-outline" style="margin-top:8px" onclick="addClass()">+ 新增班级</button>';
+  list.innerHTML = html;
+}
+
+function onConfigChange() {
+  const inputs = document.querySelectorAll('#configList .config-input');
+  const checks = document.querySelectorAll('#configList input[type="checkbox"]');
+  const cfg = {};
+  inputs.forEach(inp => {
+    const cls = inp.dataset.cls;
+    const sub = inp.dataset.sub;
+    const val = inp.value.trim();
+    if (!cfg[cls]) cfg[cls] = {};
+    if (val.includes(',')) {
+      cfg[cls][sub] = { teacher: val.split(',').map(s => s.trim()).filter(Boolean) };
+    } else if (val) {
+      cfg[cls][sub] = { teacher: val };
+    } else {
+      cfg[cls][sub] = { teacher: '' };
+    }
+  });
+  checks.forEach(cb => {
+    const cls = cb.dataset.cls;
+    const sub = cb.dataset.sub;
+    if (cfg[cls] && cfg[cls][sub]) cfg[cls][sub].isHead = cb.checked;
+  });
+  // Clean empty teachers
+  for (let cls in cfg) {
+    for (let sub in cfg[cls]) {
+      const t = cfg[cls][sub].teacher;
+      if (!t || (Array.isArray(t) && t.length === 0) || t === '') {
+        cfg[cls][sub].teacher = null;
+      }
+    }
+  }
+  editingConfig = cfg;
+}
+
+function collectConfigFromDOM() {
+  onConfigChange();
+  return editingConfig;
+}
+
+function saveConfig() {
+  const cfg = collectConfigFromDOM();
+  saveConfigToStorage(cfg);
+  showToast('配置已保存到本地');
+}
+
+function resetConfig() {
+  if (!confirm('恢复为默认班级配置？当前修改将丢失。')) return;
+  saveConfigToStorage(DEFAULT_CONFIG);
+  editingConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+  renderConfigPanel();
+  showToast('已恢复默认配置');
+}
+
+function addClass() {
+  collectConfigFromDOM();
+  const name = prompt('请输入新班级名称：');
+  if (!name || !name.trim()) return;
+  if (editingConfig[name.trim()]) { showToast('班级已存在','warning'); return; }
+  const newCls = {};
+  SUBJECTS.forEach(s => { newCls[s] = { teacher: '' }; });
+  editingConfig[name.trim()] = newCls;
+  saveConfigToStorage(editingConfig);
+  renderConfigPanel();
+}
+
+function deleteClass(cls) {
+  if (!confirm('确定删除班级 "'+cls+'"？')) return;
+  collectConfigFromDOM();
+  delete editingConfig[cls];
+  saveConfigToStorage(editingConfig);
+  renderConfigPanel();
+}
+
+// ==================== 生成学生链接 ====================
+let currentStudentLink = '';
+
+function genStudentLink() {
+  const cfg = loadConfig();
+  if (!cfg || !Object.keys(cfg).length) { showToast('请先保存配置','warning'); return; }
+  const json = JSON.stringify(cfg);
+  const encoded = btoa(encodeURIComponent(json));
+  const base = window.location.href.replace(/admin\.html.*$/, 'student.html');
+  currentStudentLink = base + '?c=' + encoded;
+  document.getElementById('studentLink').textContent = currentStudentLink;
+  showToast('链接已生成');
+}
+
+function genQRCode() {
+  if (!currentStudentLink) { showToast('请先生成链接','warning'); return; }
+  const wrap = document.getElementById('qrCodeWrap');
+  wrap.style.display = 'block';
+  wrap.innerHTML = '';
+  new QRCode(wrap, { text: currentStudentLink, width: 200, height: 200, colorDark: '#78350F', colorLight: '#FFFFFF' });
+  wrap.scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyLink() {
+  if (!currentStudentLink) { showToast('请先生成链接','warning'); return; }
+  navigator.clipboard.writeText(currentStudentLink).then(() => showToast('已复制链接')).catch(() => {
+    const el = document.getElementById('studentLink');
+    const range = document.createRange(); range.selectNode(el);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+    document.execCommand('copy'); showToast('已复制链接');
+  });
+}
+
+// ==================== 键盘 ====================
+document.getElementById('pwdInput').addEventListener('keydown', e => { if(e.key==='Enter') checkLogin(); });
+</script>
+</body>
+</html>
