@@ -3,43 +3,865 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>姜浩张超画室</title>
+<title>姜浩张超画室 - 学生反馈系统</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <style>
+:root {
+  --primary: #D97706; --primary-dark: #92400E; --primary-light: #FEF3C7;
+  --accent: #F59E0B; --cta: #22C55E; --text: #78350F; --text-muted: #A16207;
+  --card-bg: #FFFFFF; --border: #FDE68A;
+  --score-active: #D97706; --score-hover: #FEF3C7; --score-inactive: #FFFBEB;
+  --danger: #EF4444; --collapse-bg: #FFFBEB; --badge-head: #D97706;
+}
 * { margin:0; padding:0; box-sizing:border-box; }
 body {
   font-family: 'Noto Sans SC', -apple-system, sans-serif;
   background: linear-gradient(135deg, #FFFBEB 0%, #FFF7ED 50%, #FFFBEB 100%);
-  min-height:100vh; display:flex; align-items:center; justify-content:center;
-  color:#78350F;
+  color: var(--text); line-height:1.6; min-height:100vh;
 }
-.card {
+.view { display:none; }
+.view.active { display:block; }
+
+/* ===== 入口页 ===== */
+.home-wrap {
+  display:flex; align-items:center; justify-content:center; min-height:100vh;
+}
+.home-card {
   background:#fff; border-radius:24px; padding:48px 40px; text-align:center;
   box-shadow:0 8px 40px rgba(217,119,6,0.06); border:1px solid #FDE68A;
   max-width:420px; width:90%;
 }
-.card h1 { font-size:26px; margin-bottom:8px; }
-.card p { font-size:14px; color:#A16207; margin-bottom:32px; }
-.links { display:flex; flex-direction:column; gap:12px; }
-.btn {
+.home-card h1 { font-size:26px; margin-bottom:8px; }
+.home-card p { font-size:14px; color:var(--text-muted); margin-bottom:32px; }
+.home-links { display:flex; flex-direction:column; gap:12px; }
+.home-btn {
   display:block; padding:14px 24px; border-radius:14px; font-size:15px; font-weight:600;
-  text-decoration:none; transition:all 0.2s; font-family:inherit;
+  text-decoration:none; transition:all 0.2s; font-family:inherit; cursor:pointer; border:none;
 }
-.btn-student { background:#D97706; color:#fff; }
-.btn-student:hover { background:#92400E; transform:translateY(-1px); }
-.btn-admin { background:#fff; color:#D97706; border:2px solid #FDE68A; }
-.btn-admin:hover { border-color:#D97706; transform:translateY(-1px); }
-.footer { margin-top:32px; font-size:11px; color:#A16207; opacity:0.6; }
+.home-btn-student { background:#D97706; color:#fff; }
+.home-btn-student:hover { background:#92400E; transform:translateY(-1px); }
+.home-btn-admin { background:#fff; color:#D97706; border:2px solid #FDE68A; }
+.home-btn-admin:hover { border-color:#D97706; transform:translateY(-1px); }
+.home-footer { margin-top:32px; font-size:11px; color:var(--text-muted); opacity:0.6; }
+
+/* ===== 学生端 ===== */
+.student-body::before {
+  content:''; position:fixed; top:-50%; right:-20%;
+  width:600px; height:600px;
+  background:radial-gradient(circle,rgba(217,119,6,0.06) 0%,transparent 70%);
+  border-radius:50%; pointer-events:none; z-index:0;
+}
+.student-body::after {
+  content:''; position:fixed; bottom:-30%; left:-10%;
+  width:500px; height:500px;
+  background:radial-gradient(circle,rgba(245,158,11,0.05) 0%,transparent 70%);
+  border-radius:50%; pointer-events:none; z-index:0;
+}
+.stu-container { max-width:680px; margin:0 auto; padding:24px 16px 100px; position:relative; z-index:1; }
+.stu-header { text-align:center; padding:40px 20px 32px; }
+.stu-header-icon {
+  width:64px; height:64px; background:linear-gradient(135deg,var(--primary),var(--accent));
+  border-radius:20px; display:inline-flex; align-items:center; justify-content:center;
+  margin-bottom:20px; box-shadow:0 8px 24px rgba(217,119,6,0.2);
+}
+.stu-header-icon svg { width:32px; height:32px; color:white; }
+.stu-header h1 { font-size:28px; font-weight:700; color:var(--text); margin-bottom:8px; }
+.stu-header p { font-size:15px; color:var(--text-muted); max-width:400px; margin:0 auto; }
+
+.stu-progress {
+  background:var(--card-bg); border:1px solid var(--border);
+  border-radius:16px; padding:16px 20px; margin-bottom:20px;
+  box-shadow:0 2px 8px rgba(217,119,6,0.04);
+}
+.stu-progress-info { display:flex; justify-content:space-between; margin-bottom:8px; font-size:13px; color:var(--text-muted); }
+.stu-progress-bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+.stu-progress-fill { height:100%; background:linear-gradient(90deg,var(--primary),var(--accent)); border-radius:3px; transition:width 0.4s ease; }
+
+.stu-section {
+  background:var(--card-bg); border:1px solid var(--border);
+  border-radius:16px; padding:24px; margin-bottom:16px;
+  box-shadow:0 2px 8px rgba(217,119,6,0.04);
+  transition:border-color 0.2s, box-shadow 0.2s;
+}
+.stu-section:hover { border-color:var(--accent); box-shadow:0 4px 16px rgba(217,119,6,0.08); }
+.stu-section-title { display:flex; align-items:center; gap:10px; font-size:18px; font-weight:600; color:var(--text); margin-bottom:20px; }
+.stu-section-icon {
+  width:36px; height:36px; background:var(--primary-light);
+  border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.stu-section-icon svg { width:18px; height:18px; color:var(--primary); }
+
+.stu-form-group { margin-bottom:18px; }
+.stu-form-group:last-child { margin-bottom:0; }
+.stu-form-label { display:block; font-size:14px; font-weight:500; color:var(--text); margin-bottom:6px; }
+.stu-form-label .required { color:var(--danger); margin-left:2px; }
+.stu-input, .stu-select, .stu-textarea {
+  width:100%; padding:10px 14px; font-size:14px; font-family:inherit;
+  border:1.5px solid var(--border); border-radius:10px;
+  background:#FAFEFF; color:var(--text);
+  transition:border-color 0.2s, box-shadow 0.2s; outline:none;
+}
+.stu-input:focus, .stu-select:focus, .stu-textarea:focus {
+  border-color:var(--primary); box-shadow:0 0 0 3px rgba(217,119,6,0.1); background:#FFF;
+}
+.stu-select {
+  cursor:pointer; appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23A16207' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat; background-position:right 12px center; padding-right:36px;
+}
+.stu-textarea { min-height:100px; resize:vertical; }
+
+.collapse-panel { overflow:hidden; max-height:0; opacity:0; transition:max-height 0.5s ease, opacity 0.3s ease, margin 0.3s ease; margin-top:0; }
+.collapse-panel.open { max-height:4000px; opacity:1; margin-top:18px; }
+
+.subject-card {
+  background:var(--collapse-bg); border:1px solid var(--border);
+  border-radius:14px; padding:18px; margin-bottom:14px;
+  transition:border-color 0.2s;
+}
+.subject-card:hover { border-color:var(--accent); }
+.subject-card:last-child { margin-bottom:0; }
+.subject-header {
+  display:flex; align-items:center; gap:10px; margin-bottom:14px;
+  font-size:15px; font-weight:600; color:var(--text);
+}
+.subject-icon {
+  width:32px; height:32px; border-radius:8px; background:linear-gradient(135deg,var(--primary),var(--accent));
+  display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px; flex-shrink:0;
+}
+.subject-teacher {
+  font-size:14px; font-weight:500; color:var(--primary);
+  background:var(--primary-light); padding:3px 10px; border-radius:6px;
+  display:inline-flex; align-items:center; gap:4px;
+}
+.badge-head { font-size:10px; font-weight:600; background:var(--badge-head); color:#fff; padding:1px 6px; border-radius:4px; margin-left:4px; }
+
+.score-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap; }
+.score-row:last-child { margin-bottom:0; }
+.score-label { font-size:13px; color:var(--text-muted); min-width:56px; white-space:nowrap; }
+.score-picker { display:flex; flex-wrap:wrap; gap:4px; }
+.score-btn {
+  width:34px; height:34px; border-radius:8px; border:1.5px solid var(--border);
+  background:var(--score-inactive); color:var(--text-muted);
+  font-size:13px; font-weight:600; cursor:pointer;
+  transition:all 0.15s ease; display:flex; align-items:center; justify-content:center; font-family:inherit;
+}
+.score-btn:hover { border-color:var(--accent); background:var(--score-hover); color:var(--primary); transform:translateY(-1px); }
+.score-btn.selected { border-color:var(--score-active); background:var(--score-active); color:#fff; box-shadow:0 2px 8px rgba(217,119,6,0.25); }
+.score-hint { font-size:12px; color:var(--text-muted); margin-left:4px; white-space:nowrap; }
+
+.stu-submit {
+  position:fixed; bottom:0; left:0; right:0;
+  background:rgba(255,255,255,0.92); backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-top:1px solid var(--border); padding:16px 24px;
+  z-index:100; display:flex; justify-content:center; gap:12px;
+}
+.stu-btn {
+  padding:12px 32px; border-radius:12px; font-size:15px;
+  font-weight:600; font-family:inherit; border:none; cursor:pointer;
+  transition:all 0.2s ease; display:inline-flex; align-items:center; gap:8px;
+}
+.stu-btn-primary {
+  background:linear-gradient(135deg,var(--primary),var(--primary-dark));
+  color:#fff; box-shadow:0 4px 14px rgba(217,119,6,0.3);
+  min-width:180px; justify-content:center;
+}
+.stu-btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(217,119,6,0.4); }
+.stu-btn-secondary { background:var(--card-bg); color:var(--text-muted); border:1.5px solid var(--border); }
+.stu-btn-secondary:hover { border-color:var(--accent); color:var(--primary); }
+
+.submitted-screen { display:none; text-align:center; padding:80px 24px; max-width:680px; margin:0 auto; }
+.submitted-screen.show { display:block; }
+.submitted-screen .check-icon {
+  width:80px; height:80px; background:#DCFCE7; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center; margin-bottom:24px;
+}
+.submitted-screen .check-icon svg { width:40px; height:40px; color:#22C55E; }
+.submitted-screen h2 { font-size:22px; color:var(--text); margin-bottom:8px; }
+.submitted-screen p { font-size:14px; color:var(--text-muted); margin-bottom:24px; }
+.submitted-screen .submit-time { font-size:13px; color:var(--text-muted); background:var(--primary-light); display:inline-block; padding:6px 16px; border-radius:20px; }
+.stu-footer { text-align:center; font-size:12px; color:var(--text-muted); padding:8px 0; opacity:0.7; }
+
+/* ===== 管理后台 ===== */
+.adm-container { max-width:1200px; margin:0 auto; padding:20px 16px 60px; }
+.adm-tabs { display:flex; gap:0; margin-bottom:20px; border-bottom:2px solid var(--border); }
+.adm-tab {
+  padding:10px 24px; font-size:14px; font-weight:600; cursor:pointer;
+  border:none; background:none; color:var(--text-muted); font-family:inherit;
+  border-bottom:2px solid transparent; margin-bottom:-2px; transition:all 0.2s;
+}
+.adm-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
+.adm-tab:hover { color:var(--primary); }
+
+.adm-header { display:flex; align-items:center; justify-content:space-between; padding:20px 0 12px; flex-wrap:wrap; gap:12px; }
+.adm-header h1 { font-size:22px; font-weight:700; }
+.adm-btn {
+  padding:8px 18px; border-radius:10px; font-size:13px; font-weight:600;
+  font-family:inherit; border:none; cursor:pointer; transition:all 0.2s;
+  display:inline-flex; align-items:center; gap:6px;
+}
+.adm-btn-primary { background:var(--primary); color:#fff; }
+.adm-btn-primary:hover { background:var(--primary-dark); }
+.adm-btn-outline { background:#fff; color:var(--primary); border:1.5px solid var(--border); }
+.adm-btn-outline:hover { border-color:var(--primary); }
+.adm-btn-danger { background:#fff; color:var(--danger); border:1.5px solid #FECACA; }
+.adm-btn-danger:hover { border-color:var(--danger); background:#FEF2F2; }
+.adm-btn-sm { padding:5px 12px; font-size:12px; }
+
+.stats-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:14px; margin-bottom:24px; }
+.stat-card {
+  background:var(--card-bg); border:1px solid var(--border); border-radius:14px;
+  padding:18px 20px; box-shadow:0 2px 8px rgba(217,119,6,0.04);
+}
+.stat-label { font-size:12px; color:var(--text-muted); margin-bottom:4px; }
+.stat-value { font-size:28px; font-weight:700; color:var(--primary); }
+.stat-sub { font-size:12px; color:var(--text-muted); margin-top:4px; }
+
+.adm-section {
+  background:var(--card-bg); border:1px solid var(--border);
+  border-radius:14px; padding:20px; margin-bottom:16px;
+}
+.adm-section-title { font-size:16px; font-weight:600; margin-bottom:14px; }
+
+.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.chart-box { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:20px; }
+.chart-box h3 { font-size:14px; font-weight:600; margin-bottom:12px; }
+.chart-box canvas { max-height:300px; }
+
+.adm-table-wrap { overflow-x:auto; }
+.adm-table { width:100%; border-collapse:collapse; font-size:13px; }
+.adm-table th, .adm-table td { padding:10px 12px; text-align:left; border-bottom:1px solid var(--border); white-space:nowrap; }
+.adm-table th { background:var(--primary-light); font-weight:600; }
+.adm-table tr:hover { background:#FFFDF5; }
+.adm-badge { display:inline-block; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600; }
+.adm-badge-high { background:#DCFCE7; color:#166534; }
+.adm-badge-mid { background:#FEF3C7; color:#92400E; }
+.adm-badge-low { background:#FEE2E2; color:#991B1B; }
+
+.config-class {
+  border:1px solid var(--border); border-radius:12px; margin-bottom:12px; overflow:hidden;
+  transition:border-color 0.2s;
+}
+.config-class:hover { border-color:var(--accent); }
+.config-class-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 16px; background:var(--primary-light); cursor:pointer;
+  font-weight:600; font-size:14px;
+}
+.config-class-body { padding:16px; display:none; }
+.config-class-body.open { display:block; background:#FFFBFF; }
+.config-subject {
+  display:flex; align-items:center; gap:10px; padding:10px 0;
+  border-bottom:1px dashed var(--border); flex-wrap:wrap;
+}
+.config-subject:last-child { border-bottom:none; }
+.config-subject-label { min-width:48px; font-weight:500; font-size:13px; }
+.config-input {
+  flex:1; min-width:180px; padding:6px 10px; border:1.5px solid var(--border);
+  border-radius:8px; font-size:13px; font-family:inherit; outline:none;
+}
+.config-input:focus { border-color:var(--primary); }
+.config-check { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text-muted); cursor:pointer; }
+
+.adm-search-bar { margin-bottom:14px; display:flex; gap:8px; }
+.adm-search-input {
+  flex:1; padding:8px 14px; border:1.5px solid var(--border); border-radius:10px;
+  font-size:13px; font-family:inherit; outline:none; max-width:300px;
+}
+.adm-search-input:focus { border-color:var(--primary); }
+
+.link-box {
+  background:var(--primary-light); border-radius:12px; padding:16px;
+  display:flex; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap;
+}
+.link-url {
+  flex:1; min-width:200px; padding:8px 12px; background:#fff;
+  border:1px solid var(--border); border-radius:8px; font-size:12px;
+  word-break:break-all; font-family:monospace; color:var(--text);
+}
+.qr-wrap { text-align:center; margin-top:20px; }
+.qr-wrap canvas { border:8px solid #fff; border-radius:12px; box-shadow:0 2px 12px rgba(0,0,0,0.08); }
+
+.adm-modal-overlay {
+  display:none; position:fixed; top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.4); z-index:200; align-items:center; justify-content:center;
+}
+.adm-modal-overlay.show { display:flex; }
+.adm-modal {
+  background:#fff; border-radius:16px; padding:28px; max-width:500px; width:90%;
+  box-shadow:0 16px 48px rgba(0,0,0,0.15);
+}
+.adm-modal h2 { font-size:18px; margin-bottom:16px; }
+.adm-modal input, .adm-modal textarea {
+  width:100%; padding:10px 14px; border:1.5px solid var(--border); border-radius:10px;
+  font-size:14px; font-family:inherit; margin-bottom:12px; resize:vertical;
+}
+.adm-modal textarea { min-height:200px; }
+
+.adm-login-wrap {
+  display:flex; align-items:center; justify-content:center; min-height:100vh;
+}
+.adm-login-card {
+  background:#fff; border-radius:20px; padding:40px; width:360px;
+  box-shadow:0 8px 32px rgba(217,119,6,0.08); border:1px solid var(--border); text-align:center;
+}
+.adm-login-card h1 { font-size:22px; margin-bottom:8px; }
+.adm-login-card p { font-size:13px; color:var(--text-muted); margin-bottom:24px; }
+.adm-login-card input {
+  width:100%; padding:12px 16px; border:1.5px solid var(--border); border-radius:10px;
+  font-size:14px; font-family:inherit; text-align:center; margin-bottom:12px; outline:none;
+}
+.adm-login-card input:focus { border-color:var(--primary); }
+
+.empty-state { text-align:center; padding:40px 20px; color:var(--text-muted); }
+.empty-state svg { width:64px; height:64px; color:var(--border); margin-bottom:12px; }
+
+/* Toast */
+.toast {
+  position:fixed; top:20px; left:50%; transform:translateX(-50%);
+  z-index:300; padding:10px 22px; border-radius:10px; font-size:13px; font-weight:500;
+  box-shadow:0 4px 16px rgba(0,0,0,0.1); animation:toastIn 0.3s ease; pointer-events:none;
+}
+.toast-success { background:#166534; color:#DCFCE7; }
+.toast-warning { background:#854D0E; color:#FEF3C7; }
+@keyframes toastIn { from{opacity:0;transform:translateX(-50%) translateY(-10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+@keyframes toastOut { from{opacity:1} to{opacity:0} }
+
+@media (max-width:768px) { .charts-row { grid-template-columns:1fr; } .stats-grid { grid-template-columns:1fr 1fr; } }
+@media (max-width:480px) {
+  .stu-header { padding:24px 16px 20px; } .stu-header h1 { font-size:22px; }
+  .stu-header-icon { width:52px; height:52px; border-radius:16px; } .stu-header-icon svg { width:26px; height:26px; }
+  .stu-section { padding:18px 16px; border-radius:12px; } .stu-section-title { font-size:16px; }
+  .subject-card { padding:14px; } .score-btn { width:28px; height:28px; font-size:12px; border-radius:6px; }
+  .stu-btn { padding:10px 20px; font-size:14px; } .stu-btn-primary { min-width:120px; }
+  .stu-submit { padding:12px 16px; gap:8px; }
+}
+@media (prefers-reduced-motion:reduce) { * { transition-duration:0.01ms !important; } .toast,.collapse-panel { animation:none; transition:none; } }
 </style>
 </head>
-<body>
-<div class="card">
-  <h1>🎨 姜浩张超画室</h1>
-  <p>学生反馈系统</p>
-  <div class="links">
-    <a href="student.html" class="btn btn-student">📝 学生端 · 填写问卷</a>
-    <a href="admin.html" class="btn btn-admin">🔐 管理后台 · 查看数据</a>
+<body class="student-body">
+
+<!-- ========== 入口页 ========== -->
+<div class="view active" id="view-home">
+  <div class="home-wrap">
+    <div class="home-card">
+      <h1>🎨 姜浩张超画室</h1>
+      <p>学生反馈系统</p>
+      <div class="home-links">
+        <button class="home-btn home-btn-student" onclick="switchView('student')">📝 学生端 · 填写问卷</button>
+        <button class="home-btn home-btn-admin" onclick="switchView('admin')">🔐 管理后台 · 查看数据</button>
+      </div>
+      <div class="home-footer">扫码或打开链接填写问卷</div>
+    </div>
   </div>
-  <div class="footer">请通过二维码或链接分享学生端</div>
 </div>
+
+<!-- ========== 学生端 ========== -->
+<div class="view" id="view-student">
+<div class="stu-container">
+  <header class="stu-header">
+    <div class="stu-header-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+      </svg>
+    </div>
+    <h1>姜浩张超画室 - 学生反馈问卷</h1>
+    <p>你的真实反馈是我们不断进步的动力，请认真填写</p>
+  </header>
+  <div class="stu-progress">
+    <div class="stu-progress-info"><span>填写进度</span><span id="progressText">0%</span></div>
+    <div class="stu-progress-bar"><div class="stu-progress-fill" id="progressFill" style="width:0%"></div></div>
+  </div>
+  <form id="surveyForm">
+    <div class="stu-section" id="sec-teacher">
+      <div class="stu-section-title"><div class="stu-section-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0-.491 6.347A48.62 48.62 0 0 1 12 20.904a48.62 48.62 0 0 1 8.232-4.41 60.46 60.46 0 0 0-.491-6.347m-15.482 0a50.636 50.636 0 0 0-2.658-.813A59.906 59.906 0 0 1 12 3.493a59.903 59.903 0 0 1 10.399 5.84c-.896.248-1.783.52-2.658.814m-15.482 0A50.717 50.717 0 0 1 12 13.489a50.702 50.702 0 0 1 7.74-3.342M6.75 15a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Zm0 0v-3.675A55.378 55.378 0 0 1 12 8.443m-7.007 11.55A5.981 5.981 0 0 0 6.75 15.75v-1.5"/></svg></div>一、对上课老师的评价</div>
+      <div class="stu-form-group"><label class="stu-form-label">班级 <span class="required">*</span></label><select class="stu-select" id="selClass" required><option value="">-- 请先选择班级 --</option></select></div>
+      <div class="collapse-panel" id="panelSubjects"></div>
+    </div>
+    <div class="stu-section" id="sec-canteen">
+      <div class="stu-section-title"><div class="stu-section-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8.25v-1.5m0 1.5c-1.355 0-2.697.056-4.024.166C6.845 8.51 6 9.473 6 10.608v2.513m6-4.871c1.355 0 2.697.056 4.024.166C17.155 8.51 18 9.473 18 10.608v2.513M15 8.25v-1.5m-6 1.5v-1.5m12 9.75-1.5.75a3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0 3.354 3.354 0 0 0-3 0 3.354 3.354 0 0 1-3 0L3 16.5m15-3.379a48.474 48.474 0 0 0-6-.371c-2.032 0-4.034.126-6 .371m12 0c.39.049.777.102 1.163.16 1.07.16 1.837 1.094 1.837 2.175v5.169c0 .621-.504 1.125-1.125 1.125H4.125A1.125 1.125 0 0 1 3 20.625v-5.17c0-1.08.768-2.014 1.837-2.174A47.78 47.78 0 0 1 6 13.12M12.265 3.11a.375.375 0 1 1-.53 0L12 2.845l.265.265Zm-3 0a.375.375 0 1 1-.53 0L9 2.845l.265.265Zm6 0a.375.375 0 1 1-.53 0L15 2.845l.265.265Z"/></svg></div>二、对饭堂的评价</div>
+      <div class="stu-form-group"><label class="stu-form-label">饭菜质量评分 <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:12px">1-10分</span></label><div class="score-row"><div class="score-picker" data-name="score_food"></div><span class="score-hint" id="hint-food">未评分</span></div></div>
+      <div class="stu-form-group"><label class="stu-form-label">服务态度评分 <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:12px">1-10分</span></label><div class="score-row"><div class="score-picker" data-name="score_canteen_service"></div><span class="score-hint" id="hint-canteen_service">未评分</span></div></div>
+    </div>
+    <div class="stu-section" id="sec-dorm">
+      <div class="stu-section-title"><div class="stu-section-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 21v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21m0 0h4.5V3.545M12.75 21h7.5V10.75M2.25 21h1.5m18 0h-18M2.25 9l4.5-1.636M18.75 3l-1.5.545m0 6.205 3 1m1.5.5-1.5-.5M6.75 7.364V3h-3v18m3-13.636 10.5-3.819"/></svg></div>三、对宿舍的评价</div>
+      <div class="stu-form-group"><label class="stu-form-label">宿舍管理评分 <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:12px">1-10分</span></label><div class="score-row"><div class="score-picker" data-name="score_dorm_mgmt"></div><span class="score-hint" id="hint-dorm_mgmt">未评分</span></div></div>
+      <div class="stu-form-group"><label class="stu-form-label">宿管服务评分 <span class="required">*</span> <span style="font-weight:400;color:var(--text-muted);font-size:12px">1-10分</span></label><div class="score-row"><div class="score-picker" data-name="score_dorm_service"></div><span class="score-hint" id="hint-dorm_service">未评分</span></div></div>
+    </div>
+    <div class="stu-section" id="sec-suggestion">
+      <div class="stu-section-title"><div class="stu-section-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"/></svg></div>四、个人建议</div>
+      <div class="stu-form-group"><label class="stu-form-label">你的建议或意见</label><textarea class="stu-textarea" name="suggestion" placeholder="欢迎写下任何想对我们说的话……（如对教学、饭堂、宿舍等方面的改进建议）"></textarea></div>
+    </div>
+  </form>
+  <div class="stu-footer">所有数据仅用于内部改进，你的反馈将严格保密</div>
+</div>
+<div class="submitted-screen" id="submittedScreen">
+  <div class="check-icon"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg></div>
+  <h2>感谢你的反馈！</h2>
+  <p>你已提交过问卷，每台设备仅限填写一次</p>
+  <div class="submit-time" id="submittedTime"></div>
+</div>
+<div class="stu-submit">
+  <button class="stu-btn stu-btn-secondary" onclick="resetForm()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182"/></svg> 重新填写</button>
+  <button class="stu-btn stu-btn-primary" onclick="submitForm()"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" style="width:18px;height:18px"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg> 提交问卷</button>
+</div>
+</div>
+
+<!-- ========== 管理后台 ========== -->
+<div class="view" id="view-admin">
+<div class="adm-login-wrap" id="admLoginScreen">
+  <div class="adm-login-card">
+    <h1>🔐 管理后台</h1>
+    <p>姜浩张超画室 · 学生反馈系统</p>
+    <input type="password" id="admPwdInput" placeholder="请输入管理密码" autofocus>
+    <input type="password" id="admTokenInput" placeholder="请输入 GitHub Token（可选，跨端同步用）" style="margin-bottom:8px">
+    <button class="adm-btn adm-btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="admCheckLogin()">进入后台</button>
+    <p style="font-size:11px;color:var(--text-muted);margin-top:16px">默认密码: admin888 | 不填 Token 仅本机可用</p>
+  </div>
+</div>
+<div id="admMainScreen" style="display:none">
+<div class="adm-container">
+  <div class="adm-header">
+    <div><h1>姜浩张超画室 · 管理后台</h1><div style="font-size:12px;color:var(--text-muted);margin-top:2px">学生反馈数据总览 & 问卷配置</div></div>
+    <div style="display:flex;gap:8px"><button class="adm-btn adm-btn-outline adm-btn-sm" onclick="switchView('student')">📝 学生端</button><button class="adm-btn adm-btn-outline adm-btn-sm" onclick="admLogout()">退出</button></div>
+  </div>
+  <div class="adm-tabs">
+    <button class="adm-tab active" onclick="admSwitchTab('dashboard',this)">📊 数据看板</button>
+    <button class="adm-tab" onclick="admSwitchTab('config',this)">⚙️ 问卷配置</button>
+  </div>
+  <div id="adm-tab-dashboard">
+    <div class="stats-grid" id="admStatsCards"></div>
+    <div class="charts-row"><div class="chart-box"><h3>各科目平均评分</h3><canvas id="chartSubject"></canvas></div><div class="chart-box"><h3>班级提交分布</h3><canvas id="chartClass"></canvas></div></div>
+    <div class="charts-row"><div class="chart-box"><h3>三餐宿舍评分趋势</h3><canvas id="chartOther"></canvas></div><div class="chart-box"><h3>教师评分排行 TOP10</h3><canvas id="chartTeacher"></canvas></div></div>
+    <div class="adm-section">
+      <div class="adm-section-title">📋 提交记录</div>
+      <div class="adm-search-bar">
+        <input class="adm-search-input" id="admSearchInput" placeholder="搜索 班级 / 老师名..." oninput="admRenderTable()">
+        <span style="font-size:12px;color:var(--text-muted);align-self:center" id="admTableCount"></span>
+        <button class="adm-btn adm-btn-primary adm-btn-sm" onclick="admRefreshAll()">🔄 刷新数据</button>
+        <button class="adm-btn adm-btn-outline adm-btn-sm" onclick="admExportCSV()">📤 导出CSV</button>
+        <button class="adm-btn adm-btn-outline adm-btn-sm" onclick="admShowImport()">📥 导入</button>
+        <button class="adm-btn adm-btn-danger adm-btn-sm" onclick="admConfirmClear()">🗑 清空</button>
+      </div>
+      <div class="adm-table-wrap"><table class="adm-table" id="admDataTable"><thead><tr><th>提交时间</th><th>班级</th><th>静物老师</th><th>静物讲课</th><th>静物辅导</th><th>静物点评</th><th>色彩老师</th><th>色彩讲课</th><th>色彩辅导</th><th>色彩点评</th><th>速写老师</th><th>速写讲课</th><th>速写辅导</th><th>速写点评</th><th>头像老师</th><th>头像讲课</th><th>头像辅导</th><th>头像点评</th><th>饭菜</th><th>饭堂服务</th><th>宿舍管理</th><th>宿管服务</th><th>建议</th></tr></thead><tbody></tbody></table>
+      <div class="empty-state" id="admEmptyTable"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg><p>暂无数据</p><p style="font-size:12px">等待学生提交问卷后，数据将显示在此处</p></div></div>
+    </div>
+  </div>
+  <div id="adm-tab-config" style="display:none">
+    <div class="adm-section">
+      <div class="adm-section-title" style="display:flex;justify-content:space-between;align-items:center"><span>📝 班级 & 教师配置</span><div style="display:flex;gap:8px"><button class="adm-btn adm-btn-outline adm-btn-sm" onclick="admAddClass()">+ 新增班级</button><button class="adm-btn adm-btn-outline adm-btn-sm" onclick="admSaveConfig()">💾 保存配置</button><button class="adm-btn adm-btn-outline adm-btn-sm" onclick="admResetConfig()">🔄 恢复默认</button></div></div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">在此修改班级和老师信息，保存后生成新的学生端链接。多个老师请用英文逗号分隔（如：周德涛,洪振中）。</p>
+      <div id="admConfigList"></div>
+    </div>
+    <div class="adm-section">
+      <div class="adm-section-title">🔗 生成学生端链接</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">先点击上方"保存配置"，再点击下方"生成链接"。学生会通过此链接看到最新的班级和老师列表。</p>
+      <div style="display:flex;gap:8px;margin-bottom:16px"><button class="adm-btn adm-btn-primary" onclick="admGenStudentLink()">🔗 生成学生端链接</button><button class="adm-btn adm-btn-outline" onclick="admGenQRCode()">📱 生成二维码</button><button class="adm-btn adm-btn-outline" onclick="admCopyLink()">📋 复制链接</button></div>
+      <div class="link-box"><span style="font-size:12px;color:var(--text-muted);white-space:nowrap">学生端链接：</span><span class="link-url" id="admStudentLink">尚未生成</span></div>
+      <div class="qr-wrap" id="admQRCodeWrap" style="display:none"></div>
+    </div>
+  </div>
+</div>
+</div>
+<div class="adm-modal-overlay" id="admImportModal"><div class="adm-modal"><h2>📥 导入数据</h2><p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">粘贴 JSON 或拖入 CSV。导入将合并到现有数据。</p><textarea id="admImportText" placeholder="粘贴 JSON 数据..."></textarea><div style="display:flex;gap:8px;justify-content:flex-end"><button class="adm-btn adm-btn-outline" onclick="admHideImport()">取消</button><input type="file" id="admCSVInput" accept=".csv" style="display:none" onchange="admImportCSV(event)"><button class="adm-btn adm-btn-outline" onclick="document.getElementById('admCSVInput').click()">选择CSV</button><button class="adm-btn adm-btn-primary" onclick="admDoImport()">确认导入</button></div></div></div>
+</div>
+
+<script>
+/* ===== 视图切换 & 公共函数 ===== */
+function switchView(name) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  document.getElementById('view-'+name).classList.add('active');
+  history.replaceState(null,'','?view='+name);
+  if(name==='student') initStudent();
+  if(name==='admin') document.getElementById('admPwdInput').focus();
+}
+
+function showToast(msg,type,dur){
+  type=type||'success';dur=dur||2500;
+  const e=document.querySelector('.toast'); if(e)e.remove();
+  const t=document.createElement('div'); t.className='toast toast-'+type; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},dur);
+}
+
+function getScore(name){
+  const btn=document.querySelector('.score-picker[data-name="'+name+'"] .score-btn.selected');
+  return btn?parseInt(btn.dataset.value):null;
+}
+
+const SCORE_HINTS=['😡极差','😟很差','😞较差','😕稍差','😐一般','🙂尚可','😊不错','😄良好','😍优秀','🏆满分'];
+const DATA_KEY='jhzc_survey_records';
+const CONFIG_KEY='jhzc_survey_config';
+const SUBMITTED_KEY='jhzc_survey_submitted';
+const GH_API='https://api.github.com/repos/C21-1HAO/JHZC-C21/contents/data/data.json';
+
+let gDataSHA=null,syncing=false,gToken='';
+
+function setToken(t){gToken=t;}
+
+// 同步读（localStorage 始终可用）
+function loadRecords(){
+  try{return JSON.parse(localStorage.getItem(DATA_KEY)||'[]');}catch{return[];}
+}
+function saveRecords(r){
+  localStorage.setItem(DATA_KEY,JSON.stringify(r));
+  if(gToken)syncPush(r);
+}
+async function syncPush(records){
+  if(syncing||!gToken)return;syncing=true;
+  try{
+    if(!gDataSHA){const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+gToken,Accept:'application/vnd.github+json'}});if(r.ok){const j=await r.json();gDataSHA=j.sha;}}
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(records))));
+    const body=JSON.stringify({message:'update data',content,sha:gDataSHA,branch:'main'});
+    const r=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+gToken,Accept:'application/vnd.github+json','Content-Type':'application/json'},body});
+    if(r.ok){const j=await r.json();gDataSHA=j.content.sha;}
+  }catch(e){}
+  syncing=false;
+}
+async function syncPull(){
+  if(!gToken)return;
+  try{
+    const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+gToken,Accept:'application/vnd.github+json'}});
+    if(!r.ok)return;
+    const j=await r.json();gDataSHA=j.sha;
+    const remote=JSON.parse(atob(j.content.replace(/\n/g,'')));
+    const local=loadRecords();
+    if(remote.length!==local.length||JSON.stringify(remote)!==JSON.stringify(local)){
+      localStorage.setItem(DATA_KEY,JSON.stringify(remote));
+      window.dispatchEvent(new Event('data-updated'));
+    }
+  }catch(e){}
+}
+let syncInterval=null;
+function startSync(){if(!syncInterval){syncInterval=setInterval(syncPull,12000);syncPull();}}
+
+// Init from URL param on load
+(function(){
+  const p=new URLSearchParams(window.location.search);
+  const v=p.get('view')||'home';
+  if(v==='student'||v==='admin') switchView(v);
+})();
+
+/* ===== 学生端 ===== */
+let CLASS_DATA = {
+  '清央国定制班':{静物:{teacher:'周中希'},色彩:{teacher:['敖卓劲','孔何']},速写:{teacher:'叶高原',isHead:true},头像:{teacher:'袁关琼'}},
+  '定制班':{静物:{teacher:'劳家斌'},色彩:{teacher:['周德涛','洪振中']},速写:{teacher:['梁家捷','李云晓']},头像:{teacher:['卢盛晓','蔡志坚'],isHead:true}},
+  '超能1班':{静物:{teacher:'郑祖聪',isHead:true},色彩:{teacher:'李红亮'},速写:{teacher:'任志达'},头像:{teacher:'林佳玮'}},
+  '超能2班':{静物:{teacher:'朱传渠'},色彩:{teacher:'邓长征'},速写:{teacher:'劳杰成',isHead:true},头像:{teacher:'卢优显'}},
+  '超能3班':{静物:{teacher:'何鸿海'},色彩:{teacher:'鄢正端',isHead:true},速写:{teacher:'黄卡迪'},头像:{teacher:'何文翔'}},
+  '超能4班':{静物:{teacher:'李高技'},色彩:{teacher:'陈傲'},速写:{teacher:'庄金'},头像:{teacher:'赵成圆',isHead:true}},
+  '超重1班':{静物:{teacher:'谢维俊'},色彩:{teacher:'陈晓东'},速写:{teacher:'林孟'},头像:{teacher:'陈骏关',isHead:true}},
+  '超重2班':{静物:{teacher:'蔡梦龙'},色彩:{teacher:'谢贯通',isHead:true},速写:{teacher:'张仕清'},头像:{teacher:'龙成桂'}},
+  '全能班':{静物:{teacher:'罗屏'},色彩:{teacher:'苏海云'},速写:{teacher:'陈铭均'},头像:{teacher:'蒙富景',isHead:true}},
+  '火箭1班':{静物:{teacher:'吴泽鹏',isHead:true},色彩:{teacher:'李聪'},速写:{teacher:'林明宇'},头像:{teacher:'冯南富'}},
+  '火箭2班':{静物:{teacher:'叶文澎',isHead:true},色彩:{teacher:'梁天胜'},速写:{teacher:'曾迪'},头像:{teacher:'卓远忠'}},
+  '丰泰定制班':{静物:{teacher:'陈帆'},色彩:{teacher:'莫华荣',isHead:true},速写:{teacher:'郑国波'},头像:{teacher:'吴登敏'}},
+  '新兴华侨':{静物:{teacher:'张树华'},色彩:{teacher:'冯世龙'},速写:{teacher:'梁斌'},头像:{teacher:'张树华'}},
+  '南海艺高':{静物:{teacher:'何永强'},色彩:{teacher:'陈淦全'},速写:{teacher:'林志耿'},头像:{teacher:['殷坎良','胡少波']}},
+};
+
+function loadStudentConfig(){
+  const params=new URLSearchParams(window.location.search);
+  const encoded=params.get('c');
+  if(encoded){try{const d=JSON.parse(decodeURIComponent(atob(encoded)));if(d&&typeof d==='object')return d;}catch{}}
+  try{const cfg=JSON.parse(localStorage.getItem(CONFIG_KEY));if(cfg&&typeof cfg==='object'&&Object.keys(cfg).length>0)return cfg;}catch{}
+  return null;
+}
+
+function isSubmitted(){
+  try{if(localStorage.getItem(SUBMITTED_KEY))return true;}catch{}
+  if(document.cookie.indexOf(SUBMITTED_KEY+'=1')!==-1)return true;
+  return false;
+}
+
+function markSubmitted(){
+  const now=new Date().toLocaleString('zh-CN');
+  try{localStorage.setItem(SUBMITTED_KEY,now);}catch{}
+  const d=new Date();d.setFullYear(d.getFullYear()+1);
+  document.cookie=SUBMITTED_KEY+'=1;expires='+d.toUTCString()+';path=/';
+}
+
+let studentInited=false;
+function initStudent(){
+  if(studentInited)return; studentInited=true;
+
+  if(isSubmitted()){
+    document.querySelector('#view-student .stu-container').style.display='none';
+    document.getElementById('submittedScreen').classList.add('show');
+    document.querySelector('#view-student .stu-submit').style.display='none';
+    document.getElementById('submittedTime').textContent='提交时间：'+(localStorage.getItem(SUBMITTED_KEY)||'未知时间');
+    return;
+  }
+
+  const cfg=loadStudentConfig();
+  if(cfg) CLASS_DATA=cfg;
+
+  const sel=document.getElementById('selClass');
+  sel.innerHTML='<option value="">-- 请先选择班级 --</option>';
+  for(let cls in CLASS_DATA){const o=document.createElement('option');o.value=cls;o.textContent=cls;sel.appendChild(o);}
+  sel.onchange=function(){
+    const c=this.value,p=document.getElementById('panelSubjects');
+    if(c){buildSubjectPanel(c);p.classList.add('open');setTimeout(()=>p.scrollIntoView({behavior:'smooth',block:'start'}),100);}
+    else{p.classList.remove('open');p.innerHTML='';}
+    updateProgress();
+  };
+
+  ['score_food','score_canteen_service','score_dorm_mgmt','score_dorm_service'].forEach(n=>{
+    const pk=document.querySelector('.score-picker[data-name="'+n+'"]');
+    if(pk) buildScoreButtons(pk,n);
+  });
+  updateProgress();
+}
+
+function buildScoreButtons(pk,name){
+  for(let i=1;i<=10;i++){
+    const b=document.createElement('button');b.type='button';b.className='score-btn';b.textContent=i;
+    b.dataset.value=i;b.dataset.group=name;
+    b.onclick=function(){pk.querySelectorAll('.score-btn').forEach(x=>x.classList.remove('selected'));this.classList.add('selected');const h=document.getElementById('hint-'+name);if(h)h.textContent=SCORE_HINTS[i-1]||'';updateProgress();};
+    pk.appendChild(b);
+  }
+}
+
+function buildSubjectPanel(clsName){
+  const panel=document.getElementById('panelSubjects'),data=CLASS_DATA[clsName];
+  if(!data){panel.innerHTML='';return;}
+  let html='';
+  SUBJECTS.forEach(sub=>{
+    const sd=data[sub];if(!sd)return;
+    const t=sd.teacher;if(!t||(Array.isArray(t)&&t.length===0))return;
+    const teachers=Array.isArray(t)?t:[t],isHead=sd.isHead;
+    const base=clsName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_')+'_'+sub;
+    html+='<div class="subject-card"><div class="subject-header"><div class="subject-icon">'+sub.charAt(0)+'</div><span>'+sub+'</span></div>';
+    teachers.forEach((tn,ti)=>{
+      const prefix='score_'+base+'_t'+ti;
+      html+='<div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed '+(teachers.length>1?'var(--border)':'transparent')+'">';
+      html+='<div style="margin-bottom:8px"><span class="subject-teacher">'+tn+(isHead?'<span class="badge-head">班主任</span>':'')+'</span></div>';
+      ['lecture','tutoring','review'].forEach(k=>{
+        const n=prefix+'_'+k;
+        html+='<div class="score-row"><span class="score-label">'+(k==='lecture'?'讲课':k==='tutoring'?'辅导':'作业点评')+'</span><div class="score-picker" data-name="'+n+'"></div><span class="score-hint" id="hint-'+n+'">未评分</span></div>';
+      });
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+  panel.innerHTML=html;
+  panel.querySelectorAll('.score-picker').forEach(pk=>buildScoreButtons(pk,pk.dataset.name));
+}
+
+function updateProgress(){
+  let total=0,filled=0;
+  const cls=document.getElementById('selClass').value;
+  total++;if(cls)filled++;
+  if(cls){
+    const data=CLASS_DATA[cls];
+    SUBJECTS.forEach(sub=>{
+      const sd=data[sub];if(!sd||!sd.teacher||(Array.isArray(sd.teacher)&&sd.teacher.length===0))return;
+      const t=sd.teacher,teachers=Array.isArray(t)?t:[t];
+      const base=cls.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_')+'_'+sub;
+      teachers.forEach((_,ti)=>{['lecture','tutoring','review'].forEach(k=>{total++;if(getScore('score_'+base+'_t'+ti+'_'+k))filled++;});});
+    });
+  }
+  ['score_food','score_canteen_service'].forEach(n=>{total++;if(getScore(n))filled++;});
+  ['score_dorm_mgmt','score_dorm_service'].forEach(n=>{total++;if(getScore(n))filled++;});
+  const pct=total>0?Math.round(filled/total*100):0;
+  document.getElementById('progressText').textContent=pct+'%';
+  document.getElementById('progressFill').style.width=pct+'%';
+}
+
+function submitForm(){
+  const cls=document.getElementById('selClass').value;
+  if(!cls){showToast('请先选择班级','warning');return;}
+  const data=CLASS_DATA[cls];let hasEmpty=false;
+  const sd={};
+  SUBJECTS.forEach(sub=>{
+    const d=data[sub];if(!d||!d.teacher||(Array.isArray(d.teacher)&&d.teacher.length===0))return;
+    const base=cls.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'_')+'_'+sub;
+    const t=d.teacher,teachers=Array.isArray(t)?t:[t];
+    const ls=[],ts=[],rs=[];
+    teachers.forEach((_,ti)=>{
+      const l=getScore('score_'+base+'_t'+ti+'_lecture'),tt=getScore('score_'+base+'_t'+ti+'_tutoring'),r=getScore('score_'+base+'_t'+ti+'_review');
+      if(!l||!tt||!r){hasEmpty=true;return;}ls.push(l);ts.push(tt);rs.push(r);
+    });
+    const avg=a=>Math.round(a.reduce((x,y)=>x+y,0)/a.length);
+    sd[sub]={teacher:teachers.join(','),lecture:ls.length?avg(ls):0,tutoring:ts.length?avg(ts):0,review:rs.length?avg(rs):0};
+  });
+  if(hasEmpty){showToast('请完成所有科目的评分','warning');return;}
+  ['score_food','score_canteen_service','score_dorm_mgmt','score_dorm_service'].forEach(n=>{if(!getScore(n)){showToast('请完成所有评分项','warning');hasEmpty=true;}});
+  if(hasEmpty)return;
+  if(!confirm('确认提交问卷？'))return;
+  const all=loadRecords();
+  all.push({
+    id:Date.now(),timestamp:new Date().toLocaleString('zh-CN'),班级:cls,
+    静物老师:sd['静物']?.teacher||'',静物讲课:sd['静物']?.lecture||0,静物辅导:sd['静物']?.tutoring||0,静物点评:sd['静物']?.review||0,
+    色彩老师:sd['色彩']?.teacher||'',色彩讲课:sd['色彩']?.lecture||0,色彩辅导:sd['色彩']?.tutoring||0,色彩点评:sd['色彩']?.review||0,
+    速写老师:sd['速写']?.teacher||'',速写讲课:sd['速写']?.lecture||0,速写辅导:sd['速写']?.tutoring||0,速写点评:sd['速写']?.review||0,
+    头像老师:sd['头像']?.teacher||'',头像讲课:sd['头像']?.lecture||0,头像辅导:sd['头像']?.tutoring||0,头像点评:sd['头像']?.review||0,
+    饭菜评分:getScore('score_food'),饭堂服务评分:getScore('score_canteen_service'),宿舍管理评分:getScore('score_dorm_mgmt'),宿管服务评分:getScore('score_dorm_service'),
+    建议:document.querySelector('[name="suggestion"]').value.trim()||'-',
+  });
+  saveRecords(all);markSubmitted();
+  showToast('提交成功！感谢你的反馈','success',4000);
+  setTimeout(()=>{
+    document.querySelector('#view-student .stu-container').style.display='none';
+    document.querySelector('#view-student .stu-submit').style.display='none';
+    document.getElementById('submittedScreen').classList.add('show');
+    document.getElementById('submittedTime').textContent='提交时间：'+new Date().toLocaleString('zh-CN');
+  },500);
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function resetForm(){
+  if(loadRecords().length>0&&!confirm('确认重置？'))return;
+  document.getElementById('selClass').value='';
+  document.getElementById('panelSubjects').classList.remove('open');document.getElementById('panelSubjects').innerHTML='';
+  document.querySelectorAll('.score-picker .score-btn').forEach(b=>b.classList.remove('selected'));
+  document.querySelectorAll('.score-hint').forEach(h=>h.textContent='未评分');
+  document.querySelector('[name="suggestion"]').value='';updateProgress();
+}
+
+/* ===== 管理后台 ===== */
+const ADMIN_PWD='admin888',DEFAULT_CONFIG={
+  '清央国定制班':{静物:{teacher:'周中希'},色彩:{teacher:['敖卓劲','孔何']},速写:{teacher:'叶高原',isHead:true},头像:{teacher:'袁关琼'}},
+  '定制班':{静物:{teacher:'劳家斌'},色彩:{teacher:['周德涛','洪振中']},速写:{teacher:['梁家捷','李云晓']},头像:{teacher:['卢盛晓','蔡志坚'],isHead:true}},
+  '超能1班':{静物:{teacher:'郑祖聪',isHead:true},色彩:{teacher:'李红亮'},速写:{teacher:'任志达'},头像:{teacher:'林佳玮'}},
+  '超能2班':{静物:{teacher:'朱传渠'},色彩:{teacher:'邓长征'},速写:{teacher:'劳杰成',isHead:true},头像:{teacher:'卢优显'}},
+  '超能3班':{静物:{teacher:'何鸿海'},色彩:{teacher:'鄢正端',isHead:true},速写:{teacher:'黄卡迪'},头像:{teacher:'何文翔'}},
+  '超能4班':{静物:{teacher:'李高技'},色彩:{teacher:'陈傲'},速写:{teacher:'庄金'},头像:{teacher:'赵成圆',isHead:true}},
+  '超重1班':{静物:{teacher:'谢维俊'},色彩:{teacher:'陈晓东'},速写:{teacher:'林孟'},头像:{teacher:'陈骏关',isHead:true}},
+  '超重2班':{静物:{teacher:'蔡梦龙'},色彩:{teacher:'谢贯通',isHead:true},速写:{teacher:'张仕清'},头像:{teacher:'龙成桂'}},
+  '全能班':{静物:{teacher:'罗屏'},色彩:{teacher:'苏海云'},速写:{teacher:'陈铭均'},头像:{teacher:'蒙富景',isHead:true}},
+  '火箭1班':{静物:{teacher:'吴泽鹏',isHead:true},色彩:{teacher:'李聪'},速写:{teacher:'林明宇'},头像:{teacher:'冯南富'}},
+  '火箭2班':{静物:{teacher:'叶文澎',isHead:true},色彩:{teacher:'梁天胜'},速写:{teacher:'曾迪'},头像:{teacher:'卓远忠'}},
+  '丰泰定制班':{静物:{teacher:'陈帆'},色彩:{teacher:'莫华荣',isHead:true},速写:{teacher:'郑国波'},头像:{teacher:'吴登敏'}},
+  '新兴华侨':{静物:{teacher:'张树华'},色彩:{teacher:'冯世龙'},速写:{teacher:'梁斌'},头像:{teacher:'张树华'}},
+  '南海艺高':{静物:{teacher:'何永强'},色彩:{teacher:'陈淦全'},速写:{teacher:'林志耿'},头像:{teacher:['殷坎良','胡少波']}},
+};
+function admLoadConfig(){try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;}}
+function admGetConfig(){return admLoadConfig()||JSON.parse(JSON.stringify(DEFAULT_CONFIG));}
+
+function admCheckLogin(){
+  if(document.getElementById('admPwdInput').value===ADMIN_PWD){
+    const tk=document.getElementById('admTokenInput').value.trim();
+    if(tk){setToken(tk);startSync();}
+    document.getElementById('admLoginScreen').style.display='none';
+    document.getElementById('admMainScreen').style.display='block';
+    admInitDashboard();
+  }else{showToast('密码错误','warning');}
+}
+function admLogout(){
+  document.getElementById('admMainScreen').style.display='none';
+  document.getElementById('admLoginScreen').style.display='flex';
+  document.getElementById('admPwdInput').value='';
+}
+
+document.getElementById('admPwdInput').addEventListener('keydown',e=>{if(e.key==='Enter')admCheckLogin();});
+document.getElementById('admTokenInput').addEventListener('keydown',e=>{if(e.key==='Enter')admCheckLogin();});
+
+function admLoadTestData(){
+  const p=new URLSearchParams(window.location.search);
+  if(!p.get('test'))return;
+  const now=Date.now();
+  const classes=['清央国定制班','定制班','超能1班','超能2班','超能3班','超重1班','火箭1班','火箭2班','新兴华侨','全能班','丰泰定制班','超能4班','超重2班','南海艺高','火箭2班'];
+  const teachersT={
+    静物:['周中希','劳家斌','郑祖聪','朱传渠','何鸿海','谢维俊','吴泽鹏','叶文澎','张树华','罗屏','陈帆','李高技','蔡梦龙','何永强'],
+    色彩:['敖卓劲,孔何','周德涛,洪振中','李红亮','邓长征','鄢正端','陈晓东','李聪','梁天胜','冯世龙','苏海云','莫华荣','陈傲','谢贯通','陈淦全'],
+    速写:['叶高原','梁家捷,李云晓','任志达','劳杰成','黄卡迪','林孟','林明宇','曾迪','梁斌','陈铭均','郑国波','庄金','张仕清','林志耿'],
+    头像:['袁关琼','卢盛晓,蔡志坚','林佳玮','卢优显','何文翔','陈骏关','冯南富','卓远忠','张树华','蒙富景','吴登敏','赵成圆','龙成桂','殷坎良,胡少波']
+  };
+  const tips=['挺好的，继续保持','希望老师多示范','饭堂菜式可以再多一些','宿舍空调不太制冷','老师讲课很生动','速写练习时间希望能延长','食堂排队太久','点评可以更详细一些','挺好的，没建议','希望增加课外写生机会','老师辅导很认真','饭菜很不错','宿管阿姨很亲切','宿舍热水不够用','-'];
+  const records=[],total=parseInt(p.get('test'))||15;
+  for(let i=0;i<total;i++){
+    const ci=i%classes.length,ts=new Date(now-i*1800000);
+    const rec={id:now-i*1800000,timestamp:ts.getFullYear()+'/'+String(ts.getMonth()+1).padStart(2,'0')+'/'+String(ts.getDate()).padStart(2,'0')+' '+String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0')+':'+String(ts.getSeconds()).padStart(2,'0'),班级:classes[ci]};
+    ['静物','色彩','速写','头像'].forEach(sub=>{rec[sub+'老师']=teachersT[sub][ci];rec[sub+'讲课']=Math.floor(Math.random()*7)+4;rec[sub+'辅导']=Math.floor(Math.random()*7)+3;rec[sub+'点评']=Math.floor(Math.random()*7)+4;});
+    rec['饭菜评分']=Math.floor(Math.random()*8)+3;rec['饭堂服务评分']=Math.floor(Math.random()*8)+3;rec['宿舍管理评分']=Math.floor(Math.random()*7)+4;rec['宿管服务评分']=Math.floor(Math.random()*8)+3;rec['建议']=tips[ci%tips.length];
+    records.push(rec);
+  }
+  localStorage.setItem(DATA_KEY,JSON.stringify(records));
+}
+
+function admInitDashboard(){admLoadTestData();admRefreshAll();setInterval(admRefreshAll,30000);window.addEventListener('data-updated',admRefreshAll);}
+function admRefreshAll(){admRenderStats();admRenderTable();admRenderCharts();document.getElementById('admTableCount').textContent='共 '+loadRecords().length+' 条';}
+
+function admRenderStats(){
+  const records=loadRecords(),total=records.length;
+  const classes=[...new Set(records.map(r=>r['班级']))].length;
+  const allTs=new Set();records.forEach(r=>{['静物老师','色彩老师','速写老师','头像老师'].forEach(k=>{(r[k]||'').split(',').forEach(t=>{if(t.trim())allTs.add(t.trim());});});});
+  const sf=['静物讲课','静物辅导','静物点评','色彩讲课','色彩辅导','色彩点评','速写讲课','速写辅导','速写点评','头像讲课','头像辅导','头像点评','饭菜评分','饭堂服务评分','宿舍管理评分','宿管服务评分'];
+  const allS=records.flatMap(r=>sf.map(k=>Number(r[k])).filter(n=>!isNaN(n)&&n>0));
+  const avg=allS.length?(allS.reduce((a,b)=>a+b,0)/allS.length).toFixed(1):'-';
+  const tSf=sf.slice(0,12),tS=records.flatMap(r=>tSf.map(k=>Number(r[k])).filter(n=>!isNaN(n)&&n>0));
+  const tAvg=tS.length?(tS.reduce((a,b)=>a+b,0)/tS.length).toFixed(1):'-';
+  const today=new Date().toLocaleDateString('zh-CN'),tc=records.filter(r=>r['提交时间']&&r['提交时间'].startsWith(today)).length;
+  document.getElementById('admStatsCards').innerHTML=[
+    {label:'总提交数',value:total,sub:tc+' 人今日'},{label:'涉及班级',value:classes,sub:'个班级'},{label:'涉及教师',value:allTs.size,sub:'位老师'},{label:'总平均分',value:avg,sub:'全部评分项'},{label:'教师均分',value:tAvg,sub:'四科评分'},
+  ].map(c=>'<div class="stat-card"><div class="stat-label">'+c.label+'</div><div class="stat-value">'+c.value+'</div><div class="stat-sub">'+c.sub+'</div></div>').join('');
+}
+
+function admRenderTable(){
+  const records=loadRecords(),q=(document.getElementById('admSearchInput')?.value||'').toLowerCase();
+  const filtered=q?records.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q))):records;
+  document.getElementById('admTableCount').textContent='共 '+filtered.length+' 条';
+  const empty=document.getElementById('admEmptyTable'),tbody=document.querySelector('#admDataTable tbody');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  tbody.innerHTML=filtered.slice().reverse().map(r=>{
+    const sb=s=>{const n=Number(s);if(isNaN(n)||n<=0)return'<span class="adm-badge">-</span>';return'<span class="adm-badge '+(n>=8?'adm-badge-high':n>=5?'adm-badge-mid':'adm-badge-low')+'">'+n+'</span>';};
+    return'<tr><td>'+(r['提交时间']||'-')+'</td><td>'+(r['班级']||'-')+'</td><td>'+(r['静物老师']||'-')+'</td><td>'+sb(r['静物讲课'])+'</td><td>'+sb(r['静物辅导'])+'</td><td>'+sb(r['静物点评'])+'</td><td>'+(r['色彩老师']||'-')+'</td><td>'+sb(r['色彩讲课'])+'</td><td>'+sb(r['色彩辅导'])+'</td><td>'+sb(r['色彩点评'])+'</td><td>'+(r['速写老师']||'-')+'</td><td>'+sb(r['速写讲课'])+'</td><td>'+sb(r['速写辅导'])+'</td><td>'+sb(r['速写点评'])+'</td><td>'+(r['头像老师']||'-')+'</td><td>'+sb(r['头像讲课'])+'</td><td>'+sb(r['头像辅导'])+'</td><td>'+sb(r['头像点评'])+'</td><td>'+sb(r['饭菜评分'])+'</td><td>'+sb(r['饭堂服务评分'])+'</td><td>'+sb(r['宿舍管理评分'])+'</td><td>'+sb(r['宿管服务评分'])+'</td><td style="max-width:120px;overflow:hidden;text-overflow:ellipsis" title="'+(r['建议']||'')+'">'+(r['建议']||'-')+'</td></tr>';
+  }).join('');
+}
+
+let admCharts={};
+function admRenderCharts(){
+  const records=loadRecords();
+  Object.values(admCharts).forEach(c=>c.destroy());admCharts={};if(!records.length)return;
+  const subjData={};
+  ['静物','色彩','速写','头像'].forEach(sub=>{const vals=records.flatMap(r=>[r[sub+'讲课'],r[sub+'辅导'],r[sub+'点评']].map(Number).filter(n=>!isNaN(n)&&n>0));subjData[sub]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;});
+  admCharts.cs=new Chart(document.getElementById('chartSubject'),{type:'bar',data:{labels:Object.keys(subjData),datasets:[{label:'平均分',data:Object.values(subjData),backgroundColor:'#F59E0B',borderRadius:6}]},options:{scales:{y:{beginAtZero:true,max:10,ticks:{stepSize:2}}},plugins:{legend:{display:false}}}});
+  const cc={};records.forEach(r=>{const c=r['班级']||'未知';cc[c]=(cc[c]||0)+1;});
+  const clsS=Object.entries(cc).sort((a,b)=>b[1]-a[1]);
+  admCharts.cc=new Chart(document.getElementById('chartClass'),{type:'bar',data:{labels:clsS.map(e=>e[0]),datasets:[{label:'提交数',data:clsS.map(e=>e[1]),backgroundColor:'#D97706',borderRadius:6}]},options:{indexAxis:'y',plugins:{legend:{display:false}}}});
+  const od={};
+  ['饭菜评分','饭堂服务评分','宿舍管理评分','宿管服务评分'].forEach(k=>{const vals=records.map(r=>Number(r[k])).filter(n=>!isNaN(n)&&n>0);od[k.replace('评分','')]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;});
+  admCharts.co=new Chart(document.getElementById('chartOther'),{type:'bar',data:{labels:Object.keys(od),datasets:[{label:'平均分',data:Object.values(od),backgroundColor:['#F59E0B','#D97706','#92400E','#78350F'],borderRadius:6}]},options:{scales:{y:{beginAtZero:true,max:10,ticks:{stepSize:2}}},plugins:{legend:{display:false}}}});
+  const ts={};records.forEach(r=>{['静物','色彩','速写','头像'].forEach(sub=>{(r[sub+'老师']||'').split(',').map(t=>t.trim()).filter(Boolean).forEach(tn=>{['讲课','辅导','点评'].forEach(k=>{const v=Number(r[sub+k]);if(!isNaN(v)&&v>0){if(!ts[tn])ts[tn]=[];ts[tn].push(v);}});});});});
+  const tA=Object.entries(ts).map(([n,s])=>({name:n,avg:s.reduce((a,b)=>a+b,0)/s.length})).sort((a,b)=>b.avg-a.avg).slice(0,10);
+  admCharts.ct=new Chart(document.getElementById('chartTeacher'),{type:'bar',data:{labels:tA.map(e=>e.name),datasets:[{label:'教师均分',data:tA.map(e=>e.avg.toFixed(1)),backgroundColor:'#F59E0B',borderRadius:6}]},options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,max:10,ticks:{stepSize:2}}}}});
+}
+
+function admSwitchTab(tab,btn){document.querySelectorAll('.adm-tab').forEach(t=>t.classList.remove('active'));btn.classList.add('active');document.getElementById('adm-tab-dashboard').style.display=tab==='dashboard'?'block':'none';document.getElementById('adm-tab-config').style.display=tab==='config'?'block':'none';if(tab==='config')admRenderConfigPanel();if(tab==='dashboard')admInitDashboard();}
+
+function admExportCSV(){
+  const records=loadRecords();if(!records.length){showToast('暂无数据','warning');return;}
+  const headers=['提交时间','班级','静物老师','静物讲课','静物辅导','静物点评','色彩老师','色彩讲课','色彩辅导','色彩点评','速写老师','速写讲课','速写辅导','速写点评','头像老师','头像讲课','头像辅导','头像点评','饭菜评分','饭堂服务评分','宿舍管理评分','宿管服务评分','建议'];
+  const csv='\uFEFF'+[headers.join(','),...records.map(r=>headers.map(h=>{const v=(r[h]!=null?r[h]:'-').toString();return v.includes(',')||v.includes('"')?'"'+v.replace(/"/g,'""')+'"':v;}).join(','))].join('\n');
+  const b=new Blob([csv],{type:'text/csv;charset=utf-8'}),u=URL.createObjectURL(b),a=document.createElement('a');a.href=u;const d=new Date();a.download='姜浩张超画室_反馈数据_'+d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'.csv';a.click();URL.revokeObjectURL(u);showToast('已导出 '+records.length+' 条');
+}
+
+function admShowImport(){document.getElementById('admImportModal').classList.add('show');}
+function admHideImport(){document.getElementById('admImportModal').classList.remove('show');document.getElementById('admImportText').value='';}
+function admDoImport(){const t=document.getElementById('admImportText').value.trim();if(!t){showToast('请粘贴数据','warning');return;}try{const d=JSON.parse(t);if(!Array.isArray(d))throw new Error();saveRecords([...loadRecords(),...d]);showToast('导入成功');admHideImport();admInitDashboard();}catch{showToast('格式错误','warning');}}
+function admImportCSV(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=function(ev){const ls=ev.target.result.split('\n').filter(l=>l.trim());if(ls.length<2){showToast('CSV为空','warning');return;}const hs=ls[0].replace(/^\uFEFF/,'').split(',').map(h=>h.replace(/"/g,'').trim());const recs=[];for(let i=1;i<ls.length;i++){const vs=admParseCSVLine(ls[i]);if(vs.length<hs.length)continue;const o={};hs.forEach((h,idx)=>{o[h]=vs[idx]||'';});recs.push(o);}saveRecords([...loadRecords(),...recs]);showToast('CSV导入成功');admInitDashboard();};r.readAsText(f,'UTF-8');e.target.value='';}
+function admParseCSVLine(l){const r=[];let c='',q=false;for(let ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;}
+function admConfirmClear(){if(!confirm('确定清空所有数据？'))return;if(!confirm('再次确认：清空全部 '+loadRecords().length+' 条？'))return;saveRecords([]);showToast('已清空');admInitDashboard();}
+
+let admEditingConfig=null;
+function admRenderConfigPanel(){admEditingConfig=admGetConfig();const l=document.getElementById('admConfigList');let h='';for(let c in admEditingConfig){h+='<div class="config-class"><div class="config-class-header" onclick="this.nextElementSibling.classList.toggle(\'open\')"><span>📘 '+c+'</span><button class="adm-btn adm-btn-danger adm-btn-sm" onclick="event.stopPropagation();admDeleteClass(\''+c.replace(/'/g,"\\'")+'\')">删除</button></div><div class="config-class-body">';SUBJECTS.forEach(s=>{const sd=admEditingConfig[c][s]||{teacher:''},tn=Array.isArray(sd.teacher)?sd.teacher.join(','):(sd.teacher||'');h+='<div class="config-subject"><span class="config-subject-label">'+s+'</span><input class="config-input" value="'+tn.replace(/"/g,'&quot;')+'" data-cls="'+c.replace(/"/g,'&quot;')+'" data-sub="'+s+'" placeholder="老师名，多个用逗号分隔" onchange="admOnConfigChange()"><label class="config-check"><input type="checkbox" '+(sd.isHead?'checked':'')+' data-cls="'+c.replace(/"/g,'&quot;')+'" data-sub="'+s+'" onchange="admOnConfigChange()"> 班主任</label></div>';});h+='</div></div>';}h+='<button class="adm-btn adm-btn-outline" style="margin-top:8px" onclick="admAddClass()">+ 新增班级</button>';l.innerHTML=h;}
+function admOnConfigChange(){const is=document.querySelectorAll('#admConfigList .config-input'),cs=document.querySelectorAll('#admConfigList input[type="checkbox"]'),cfg={};is.forEach(inp=>{const c=inp.dataset.cls,s=inp.dataset.sub,v=inp.value.trim();if(!cfg[c])cfg[c]={};if(v.includes(',')){cfg[c][s]={teacher:v.split(',').map(x=>x.trim()).filter(Boolean)};}else if(v){cfg[c][s]={teacher:v};}else{cfg[c][s]={teacher:''};}});cs.forEach(cb=>{const c=cb.dataset.cls,s=cb.dataset.sub;if(cfg[c]&&cfg[c][s])cfg[c][s].isHead=cb.checked;});for(let c in cfg)for(let s in cfg[c]){const t=cfg[c][s].teacher;if(!t||(Array.isArray(t)&&t.length===0)||t==='')cfg[c][s].teacher=null;}admEditingConfig=cfg;}
+function admSaveConfig(){admOnConfigChange();localStorage.setItem(CONFIG_KEY,JSON.stringify(admEditingConfig));showToast('配置已保存');}
+function admResetConfig(){if(!confirm('恢复默认配置？'))return;localStorage.setItem(CONFIG_KEY,JSON.stringify(DEFAULT_CONFIG));admEditingConfig=JSON.parse(JSON.stringify(DEFAULT_CONFIG));admRenderConfigPanel();showToast('已恢复');}
+function admAddClass(){admOnConfigChange();const n=prompt('新班级名称：');if(!n||!n.trim())return;if(admEditingConfig[n.trim()]){showToast('已存在','warning');return;}const nc={};SUBJECTS.forEach(s=>{nc[s]={teacher:''};});admEditingConfig[n.trim()]=nc;localStorage.setItem(CONFIG_KEY,JSON.stringify(admEditingConfig));admRenderConfigPanel();}
+function admDeleteClass(c){if(!confirm('删除 "'+c+'"？'))return;admOnConfigChange();delete admEditingConfig[c];localStorage.setItem(CONFIG_KEY,JSON.stringify(admEditingConfig));admRenderConfigPanel();}
+
+let admCurLink='';
+function admGenStudentLink(){const cfg=admLoadConfig();if(!cfg||!Object.keys(cfg).length){showToast('请先保存配置','warning');return;}const json=JSON.stringify(cfg),encoded=btoa(encodeURIComponent(json));const base=window.location.href.replace(/\?.*$/,'');admCurLink=base+'?view=student&c='+encoded;document.getElementById('admStudentLink').textContent=admCurLink;showToast('链接已生成');}
+function admGenQRCode(){if(!admCurLink){showToast('请先生成链接','warning');return;}const w=document.getElementById('admQRCodeWrap');w.style.display='block';w.innerHTML='';new QRCode(w,{text:admCurLink,width:200,height:200,colorDark:'#78350F',colorLight:'#FFFFFF'});w.scrollIntoView({behavior:'smooth'});}
+function admCopyLink(){if(!admCurLink){showToast('请先生成链接','warning');return;}navigator.clipboard.writeText(admCurLink).then(()=>showToast('已复制')).catch(()=>{const el=document.getElementById('admStudentLink'),range=document.createRange();range.selectNode(el);window.getSelection().removeAllRanges();window.getSelection().addRange(range);document.execCommand('copy');showToast('已复制');});}
+
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'&&document.getElementById('view-student').classList.contains('active')){e.preventDefault();submitForm();}});
+</script>
 </body>
 </html>
