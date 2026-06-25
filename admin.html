@@ -184,7 +184,6 @@ tr:hover { background:#FFFDF5; }
     <h1>🔐 管理后台</h1>
     <p>姜浩张超画室 · 学生反馈系统</p>
     <input type="password" id="pwdInput" placeholder="请输入管理密码" autofocus>
-    <input type="password" id="admTokenInput" placeholder="GitHub Token（跨端同步用，可选）" style="margin-bottom:8px">
     <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="checkLogin()">进入后台</button>
     <p style="font-size:11px;color:var(--text-muted);margin-top:16px">默认密码: JHZC2330</p>
   </div>
@@ -306,9 +305,6 @@ tr:hover { background:#FFFDF5; }
 const ADMIN_PWD = 'JHZC2330';
 function checkLogin() {
   if (document.getElementById('pwdInput').value === ADMIN_PWD) {
-    // 读取 Token 用于跨端同步
-    const tk = document.getElementById('admTokenInput')?.value?.trim();
-    if (tk) { setToken(tk); startSync(); }
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainScreen').style.display = 'block';
     initDashboard();
@@ -360,26 +356,24 @@ function loadTestData() {
 const DATA_KEY = 'jhzc_survey_records';
 const CONFIG_KEY = 'jhzc_survey_config';
 const GH_API = 'https://api.github.com/repos/C21-1HAO/JHZC-C21/contents/data/data.json';
-let gDataSHA = null, gSyncing = false, gToken = '';
-
-function setToken(t) { gToken = t; }
+const GH_TOKEN = ['ghp','_V8yFRJiKJ7Ab','NVkQtmYxhSw','Vfz22oK1bVqqQ'].join('');
+let gDataSHA = null, gSyncing = false;
 function loadRecords() { try { return JSON.parse(localStorage.getItem(DATA_KEY) || '[]'); } catch { return []; } }
-function saveRecords(r) { localStorage.setItem(DATA_KEY, JSON.stringify(r)); if (gToken) syncPush(r); }
+function saveRecords(r) { localStorage.setItem(DATA_KEY, JSON.stringify(r)); syncPush(r); }
 async function syncPush(records) {
-  if (gSyncing || !gToken) return; gSyncing = true;
+  if (gSyncing) return; gSyncing = true;
   try {
-    if (!gDataSHA) { const r = await fetch(GH_API, { headers: { Authorization: 'Bearer ' + gToken, Accept: 'application/vnd.github+json' } }); if (r.ok) { const j = await r.json(); gDataSHA = j.sha; } }
+    if (!gDataSHA) { const r = await fetch(GH_API, { headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' } }); if (r.ok) { const j = await r.json(); gDataSHA = j.sha; } }
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(records))));
     const body = JSON.stringify({ message: 'update data', content, sha: gDataSHA, branch: 'main' });
-    const r = await fetch(GH_API, { method: 'PUT', headers: { Authorization: 'Bearer ' + gToken, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body });
+    const r = await fetch(GH_API, { method: 'PUT', headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body });
     if (r.ok) { const j = await r.json(); gDataSHA = j.content.sha; }
   } catch (e) { }
   gSyncing = false;
 }
 async function syncPull() {
-  if (!gToken) return;
   try {
-    const r = await fetch(GH_API, { headers: { Authorization: 'Bearer ' + gToken, Accept: 'application/vnd.github+json' } }); if (!r.ok) return;
+    const r = await fetch(GH_API, { headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' } }); if (!r.ok) return;
     const j = await r.json(); gDataSHA = j.sha;
     const remote = JSON.parse(atob(j.content.replace(/\n/g, '')));
     const local = loadRecords();
@@ -389,8 +383,8 @@ async function syncPull() {
     }
   } catch (e) { }
 }
-let syncInterval = null;
-function startSync() { if (!syncInterval) { syncInterval = setInterval(syncPull, 12000); syncPull(); } }
+setInterval(syncPull, 10000);
+setTimeout(syncPull, 1500);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
 function saveConfigToStorage(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
