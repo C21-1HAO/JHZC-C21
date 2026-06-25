@@ -222,6 +222,7 @@ tr:hover { background:#FFFDF5; }
       <div class="search-bar">
         <input class="search-input" id="searchInput" placeholder="搜索 班级 / 老师名..." oninput="renderTable()">
         <span style="font-size:12px;color:var(--text-muted);align-self:center" id="tableCount"></span>
+        <button class="btn btn-primary btn-sm" onclick="refreshAll()">🔄 刷新数据</button>
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">📤 导出CSV</button>
         <button class="btn btn-outline btn-sm" onclick="showImport()">📥 导入</button>
         <button class="btn btn-danger btn-sm" onclick="confirmClear()">🗑 清空</button>
@@ -315,6 +316,42 @@ function logout() {
   document.getElementById('pwdInput').value = '';
 }
 
+// 自动加载测试数据
+function loadTestData() {
+  const p = new URLSearchParams(window.location.search);
+  if (!p.get('test')) return;
+  const now = Date.now();
+  const classes = ['清央国定制班','定制班','超能1班','超能2班','超能3班','超重1班','火箭1班','火箭2班','新兴华侨','全能班','丰泰定制班','超能4班','超重2班','南海艺高','火箭2班'];
+  const teachers = {
+    静物: ['周中希','劳家斌','郑祖聪','朱传渠','何鸿海','谢维俊','吴泽鹏','叶文澎','张树华','罗屏','陈帆','李高技','蔡梦龙','何永强'],
+    色彩: ['敖卓劲,孔何','周德涛,洪振中','李红亮','邓长征','鄢正端','陈晓东','李聪','梁天胜','冯世龙','苏海云','莫华荣','陈傲','谢贯通','陈淦全'],
+    速写: ['叶高原','梁家捷,李云晓','任志达','劳杰成','黄卡迪','林孟','林明宇','曾迪','梁斌','陈铭均','郑国波','庄金','张仕清','林志耿'],
+    头像: ['袁关琼','卢盛晓,蔡志坚','林佳玮','卢优显','何文翔','陈骏关','冯南富','卓远忠','张树华','蒙富景','吴登敏','赵成圆','龙成桂','殷坎良,胡少波']
+  };
+  const tips = ['挺好的，继续保持','希望老师多示范','饭堂菜式可以再多一些','宿舍空调不太制冷','老师讲课很生动','速写练习时间希望能延长','食堂排队太久','点评可以更详细一些','挺好的，没建议','希望增加课外写生机会','老师辅导很认真','饭菜很不错','宿管阿姨很亲切','宿舍热水不够用','-'];
+  const records = [];
+  const total = parseInt(p.get('test')) || 15;
+  for (let i = 0; i < total; i++) {
+    const ci = i % classes.length;
+    const ts = new Date(now - i * 1800000);
+    const t = ts.getFullYear()+'/'+String(ts.getMonth()+1).padStart(2,'0')+'/'+String(ts.getDate()).padStart(2,'0')+' '+String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0')+':'+String(ts.getSeconds()).padStart(2,'0');
+    const rec = {id: now - i*1800000, timestamp: t, 班级: classes[ci]};
+    ['静物','色彩','速写','头像'].forEach(sub => {
+      rec[sub+'老师'] = teachers[sub][ci];
+      rec[sub+'讲课'] = Math.floor(Math.random()*7)+4;
+      rec[sub+'辅导'] = Math.floor(Math.random()*7)+3;
+      rec[sub+'点评'] = Math.floor(Math.random()*7)+4;
+    });
+    rec['饭菜评分'] = Math.floor(Math.random()*8)+3;
+    rec['饭堂服务评分'] = Math.floor(Math.random()*8)+3;
+    rec['宿舍管理评分'] = Math.floor(Math.random()*7)+4;
+    rec['宿管服务评分'] = Math.floor(Math.random()*8)+3;
+    rec['建议'] = tips[ci % tips.length];
+    records.push(rec);
+  }
+  localStorage.setItem(DATA_KEY, JSON.stringify(records));
+}
+
 // ==================== 数据层 ====================
 const DATA_KEY = 'jhzc_survey_records';
 const CONFIG_KEY = 'jhzc_survey_config';
@@ -365,7 +402,14 @@ function showToast(msg, type) {
 
 // ==================== 仪表盘 ====================
 function initDashboard() {
+  refreshAll();
+  // 每30秒自动刷新
+  setInterval(refreshAll, 30000);
+}
+
+function refreshAll() {
   renderStats(); renderTable(); renderCharts();
+  document.getElementById('tableCount').textContent = '共 '+loadRecords().length+' 条';
 }
 
 function renderStats() {
