@@ -679,8 +679,23 @@ function resetForm() {
 
 // ==================== 存储 ====================
 const SK = 'jhzc_survey_records';
+const GH_API = 'https://api.github.com/repos/C21-1HAO/JHZC-C21/contents/data/data.json';
+let gDataSHA = null, gSyncing = false, gToken = '';
 function loadRecords() { try{return JSON.parse(localStorage.getItem(SK)||'[]');}catch{return[];} }
-function saveRecords(r) { localStorage.setItem(SK,JSON.stringify(r)); }
+function saveRecords(r) { localStorage.setItem(SK,JSON.stringify(r)); if(gToken) syncPush(r); }
+async function syncPush(records){
+  if(gSyncing||!gToken)return;gSyncing=true;
+  try{
+    if(!gDataSHA){const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+gToken,Accept:'application/vnd.github+json'}});if(r.ok){const j=await r.json();gDataSHA=j.sha;}}
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(records))));
+    const body=JSON.stringify({message:'update data',content,sha:gDataSHA,branch:'main'});
+    const r=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+gToken,Accept:'application/vnd.github+json','Content-Type':'application/json'},body});
+    if(r.ok){const j=await r.json();gDataSHA=j.content.sha;}
+  }catch(e){}
+  gSyncing=false;
+}
+function setStudentToken(t){gToken=t;}
+(function(){const p=new URLSearchParams(window.location.search);const t=p.get('t');if(t)setStudentToken(t);})();
 
 // ==================== 导出 ====================
 function exportData() {
