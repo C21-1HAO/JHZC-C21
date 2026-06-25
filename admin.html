@@ -358,33 +358,33 @@ const CONFIG_KEY = 'jhzc_survey_config';
 const GH_API = 'https://api.github.com/repos/C21-1HAO/JHZC-C21/contents/data/data.json';
 const GH_TOKEN = ['ghp','_V8yFRJiKJ7Ab','NVkQtmYxhSw','Vfz22oK1bVqqQ'].join('');
 let gDataSHA = null, gSyncing = false;
-function loadRecords() { try { return JSON.parse(localStorage.getItem(DATA_KEY) || '[]'); } catch { return []; } }
-function saveRecords(r) { localStorage.setItem(DATA_KEY, JSON.stringify(r)); syncPush(r); }
-async function syncPush(records) {
-  if (gSyncing) return; gSyncing = true;
-  try {
-    if (!gDataSHA) { const r = await fetch(GH_API, { headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' } }); if (r.ok) { const j = await r.json(); gDataSHA = j.sha; } }
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(records))));
-    const body = JSON.stringify({ message: 'update data', content, sha: gDataSHA, branch: 'main' });
-    const r = await fetch(GH_API, { method: 'PUT', headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body });
-    if (r.ok) { const j = await r.json(); gDataSHA = j.content.sha; }
-  } catch (e) { }
-  gSyncing = false;
+function utf8ToB64(str){const bytes=new TextEncoder().encode(str);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);}
+function b64ToUtf8(str){return new TextDecoder().decode(Uint8Array.from(atob(str),c=>c.charCodeAt(0)));}
+function loadRecords(){try{return JSON.parse(localStorage.getItem(DATA_KEY)||'[]');}catch{return[];}}
+function saveRecords(r){localStorage.setItem(DATA_KEY,JSON.stringify(r));syncPush(r);}
+async function syncPush(records){
+  if(gSyncing)return;gSyncing=true;
+  try{
+    if(!gDataSHA){const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});if(r.ok){const j=await r.json();gDataSHA=j.sha;}}
+    const content=utf8ToB64(JSON.stringify(records));
+    const r=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'update',content,sha:gDataSHA,branch:'main'})});
+    if(r.ok){const j=await r.json();gDataSHA=j.content.sha;}
+  }catch(e){}
+  gSyncing=false;
 }
-async function syncPull() {
-  try {
-    const r = await fetch(GH_API, { headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' } }); if (!r.ok) return;
-    const j = await r.json(); gDataSHA = j.sha;
-    const remote = JSON.parse(atob(j.content.replace(/\n/g, '')));
-    const local = loadRecords();
-    if (remote.length !== local.length || JSON.stringify(remote) !== JSON.stringify(local)) {
-      localStorage.setItem(DATA_KEY, JSON.stringify(remote));
+async function syncPull(){
+  try{
+    const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});if(!r.ok)return;
+    const j=await r.json();gDataSHA=j.sha;
+    const remote=JSON.parse(b64ToUtf8(j.content));
+    const local=loadRecords();
+    if(remote.length!==local.length||JSON.stringify(remote)!==JSON.stringify(local)){
+      localStorage.setItem(DATA_KEY,JSON.stringify(remote));
       window.dispatchEvent(new Event('data-updated'));
     }
-  } catch (e) { }
+  }catch(e){console.warn('Sync pull failed:',e.message);}
 }
-setInterval(syncPull, 10000);
-setTimeout(syncPull, 1500);
+setInterval(syncPull,10000);setTimeout(syncPull,1500);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
 function saveConfigToStorage(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
