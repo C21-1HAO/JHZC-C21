@@ -220,7 +220,7 @@ tr:hover { background:#FFFDF5; }
       <div class="search-bar">
         <input class="search-input" id="searchInput" placeholder="搜索 班级 / 老师名..." oninput="renderTable()">
         <span style="font-size:12px;color:var(--text-muted);align-self:center" id="tableCount"></span>
-        <button class="btn btn-primary btn-sm" onclick="refreshAll()">🔄 刷新数据</button>
+        <button class="btn btn-primary btn-sm" onclick="forceRefresh()">🔄 刷新数据</button>
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">📤 导出CSV</button>
         <button class="btn btn-outline btn-sm" onclick="showImport()">📥 导入</button>
         <button class="btn btn-danger btn-sm" onclick="confirmClear()">🗑 清空</button>
@@ -468,9 +468,16 @@ function showToast(msg, type) {
 
 // ==================== 仪表盘 ====================
 function initDashboard() {
+  forceRefresh();
+  setInterval(syncPull, 2000);
+}
+
+let eventBound = false;
+async function forceRefresh() {
+  await syncPull();
   refreshAll();
-  setInterval(refreshAll, 30000);
-  window.addEventListener('data-updated', refreshAll);
+  // 仅绑定一次数据变更监听
+  if (!eventBound) { window.addEventListener('data-updated', refreshAll); eventBound = true; }
 }
 
 function refreshAll() {
