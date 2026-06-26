@@ -171,26 +171,14 @@ tr:hover { background:#FFFDF5; }
 </head>
 <body>
 
-<!-- 登录 -->
-<div class="login-wrap" id="loginScreen">
-  <div class="login-card">
-    <h1>🔐 管理后台</h1>
-    <p>姜浩张超画室 · 学生反馈系统</p>
-    <input type="password" id="pwdInput" placeholder="请输入管理密码" autofocus>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="checkLogin()">进入后台</button>
-    <p style="font-size:11px;color:var(--text-muted);margin-top:16px">默认密码: JHZC2330</p>
-  </div>
-</div>
-
 <!-- 主界面 -->
-<div id="mainScreen" style="display:none">
+<div id="mainScreen">
 <div class="container">
   <div class="header">
     <div>
       <h1>姜浩张超画室 · 管理后台</h1>
       <div style="font-size:12px;color:var(--text-muted);margin-top:2px">学生反馈数据总览 & 问卷配置</div>
     </div>
-    <button class="btn btn-outline btn-sm" onclick="logout()">退出</button>
   </div>
 
   <!-- Tabs -->
@@ -327,22 +315,10 @@ tr:hover { background:#FFFDF5; }
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
-// ==================== 密码 ====================
-const ADMIN_PWD = 'JHZC2330';
-function checkLogin() {
-  if (document.getElementById('pwdInput').value === ADMIN_PWD) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainScreen').style.display = 'block';
-    initDashboard();
-  } else { showToast('密码错误','warning'); }
-}
-function logout() {
-  document.getElementById('mainScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('pwdInput').value = '';
-}
+// ==================== 初始化 ====================
+initDashboard();
 
-// 自动加载测试数据
+// ==================== 自动加载测试数据 ====================
 function loadTestData() {
   const p = new URLSearchParams(window.location.search);
   if (!p.get('test')) return;
@@ -420,7 +396,7 @@ async function syncPull(){
     }
   }catch(e){console.warn('Sync pull failed:',e.message);}
 }
-setInterval(syncPull,2000);setTimeout(syncPull,300);
+setTimeout(syncPull, 100);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
 function saveConfigToStorage(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
@@ -469,7 +445,7 @@ function showToast(msg, type) {
 // ==================== 仪表盘 ====================
 function initDashboard() {
   forceRefresh();
-  setInterval(syncPull, 2000);
+  setInterval(syncPull, 1500);
 }
 
 let eventBound = false;
@@ -898,7 +874,6 @@ function copyLink() {
 }
 
 // ==================== 键盘 ====================
-document.getElementById('pwdInput').addEventListener('keydown', e => { if(e.key==='Enter') checkLogin(); });
 </script>
 </body>
 </html>
