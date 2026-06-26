@@ -212,6 +212,7 @@ tr:hover { background:#FFFDF5; }
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">📤 导出CSV</button>
         <button class="btn btn-outline btn-sm" onclick="showImport()">📥 导入</button>
         <button class="btn btn-danger btn-sm" onclick="confirmClear()">🗑 清空</button>
+        <button class="btn btn-outline btn-sm" onclick="undoClear()" id="undoBtn" style="display:none">↩ 撤销清空</button>
       </div>
       <div class="table-wrap">
         <table id="dataTable"><thead><tr>
@@ -241,6 +242,7 @@ tr:hover { background:#FFFDF5; }
           <button class="btn btn-outline btn-sm" onclick="addClass()">+ 新增班级</button>
           <button class="btn btn-outline btn-sm" onclick="saveConfig()">💾 保存配置</button>
           <button class="btn btn-outline btn-sm" onclick="resetConfig()">🔄 恢复默认</button>
+          <button class="btn btn-outline btn-sm" onclick="undoConfig()" id="undoConfigBtn" style="display:none">↩ 撤销修改</button>
         </div>
       </div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
@@ -299,6 +301,10 @@ tr:hover { background:#FFFDF5; }
 <script>
 // ==================== 初始化 ====================
 initDashboard();
+// 显示撤销按钮
+if (localStorage.getItem('jhzc_undo_backup')) {
+  setTimeout(() => { const b = document.getElementById('undoBtn'); if (b) b.style.display = 'inline-flex'; }, 500);
+}
 
 // ==================== 自动加载测试数据 ====================
 function loadTestData() {
@@ -418,7 +424,7 @@ function switchTab(tab, btn) {
   document.getElementById('tab-config').style.display = tab==='config'?'block':'none';
   document.getElementById('tab-round').style.display = tab==='round'?'block':'none';
   if (tab !== 'dashboard' && syncTimer) { clearInterval(syncTimer); syncTimer = null; }
-  if (tab === 'config') renderConfigPanel();
+  if (tab === 'config') { renderConfigPanel(); showUndoConfigBtn(); }
   if (tab === 'dashboard') initDashboard();
   if (tab === 'round') initRoundPanel();
 }
@@ -680,8 +686,14 @@ function importCSV(e){
 }
 function parseCSVLine(l){const r=[];let c='',q=false;for(let ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;}
 async function confirmClear(){
-  if(!confirm('确定清空所有数据？不可恢复！'))return;
+  if(!confirm('确定清空所有学生填写数据（教师班级配置不受影响）？'))return;
   if(!confirm('再次确认：清空全部 '+loadRecords().length+' 条？'))return;
+
+  // 备份当前数据
+  const current = loadRecords();
+  if (current.length > 0) {
+    localStorage.setItem('jhzc_undo_backup', JSON.stringify(current));
+  }
 
   let cleared = false;
   try {
@@ -694,10 +706,30 @@ async function confirmClear(){
       if(r2.ok){const j2=await r2.json();gDataSHA=j2.content.sha;cleared=true;}
     }
   } catch(e) {}
-  if(!cleared){showToast('远程清空失败，请检查网络后重试','warning');return;}
+  if(!cleared){showToast('远程清空失败，请重试','warning');return;}
 
   localStorage.removeItem(DATA_KEY);
-  showToast('已清空'); initDashboard();
+  document.getElementById('undoBtn').style.display = 'inline-flex';
+  showToast('已清空学生数据（可撤销）'); initDashboard();
+}
+
+async function undoClear() {
+  const backup = localStorage.getItem('jhzc_undo_backup');
+  if (!backup) { showToast('没有可恢复的数据','warning'); return; }
+  if (!confirm('恢复之前的数据？将覆盖当前数据。')) return;
+  const records = JSON.parse(backup);
+  const content = utf8ToB64(JSON.stringify(records));
+  try {
+    const r = await fetch(GH_API, {headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
+    if (r.ok) {
+      const j = await r.json();
+      await fetch(GH_API, {method:'PUT', headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'}, body:JSON.stringify({message:'undo clear', content, sha:j.sha, branch:'main'})});
+    }
+  } catch(e) {}
+  localStorage.setItem(DATA_KEY, backup);
+  localStorage.removeItem('jhzc_undo_backup');
+  document.getElementById('undoBtn').style.display = 'none';
+  showToast('数据已恢复'); initDashboard();
 }
 
 // ==================== 问卷配置面板 ====================
@@ -769,6 +801,11 @@ function collectConfigFromDOM() {
 }
 
 function saveConfig() {
+  // 备份当前配置
+  const old = loadConfig();
+  if (old && Object.keys(old).length > 0) {
+    localStorage.setItem('jhzc_config_backup', JSON.stringify(old));
+  }
   const cfg = collectConfigFromDOM();
   saveConfigToStorage(cfg);
   showToast('配置已保存到本地');
@@ -779,7 +816,27 @@ function resetConfig() {
   saveConfigToStorage(DEFAULT_CONFIG);
   editingConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   renderConfigPanel();
+  document.getElementById('undoConfigBtn').style.display = 'none';
   showToast('已恢复默认配置');
+}
+
+function undoConfig() {
+  const backup = localStorage.getItem('jhzc_config_backup');
+  if (!backup) { showToast('没有可恢复的配置','warning'); return; }
+  if (!confirm('恢复到修改前的配置？')) return;
+  const cfg = JSON.parse(backup);
+  saveConfigToStorage(cfg);
+  editingConfig = cfg;
+  renderConfigPanel();
+  document.getElementById('undoConfigBtn').style.display = 'none';
+  showToast('配置已恢复');
+}
+
+// 配置页显示撤销按钮
+function showUndoConfigBtn() {
+  if (localStorage.getItem('jhzc_config_backup')) {
+    document.getElementById('undoConfigBtn').style.display = 'inline-flex';
+  }
 }
 
 function addClass() {
