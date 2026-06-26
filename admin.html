@@ -582,25 +582,42 @@ function renderTeacherRanking() {
   });
 
   area.innerHTML = html;
-  document.getElementById('suggestEmpty').style.display = records.length ? 'none' : 'block';
 }
 
-// 建议汇总
+// 建议汇总（层级折叠，分班级）
 function renderSuggestions() {
   const records = loadRecords();
   const area = document.getElementById('suggestArea');
   const empty = document.getElementById('suggestEmpty');
-  if (!records.length) { empty.style.display = 'block'; return; }
+  if (!records.length) { empty.style.display = 'block'; area.innerHTML = ''; return; }
   const tips = records.filter(r => r['建议'] && r['建议'] !== '-' && r['建议'].trim());
   if (!tips.length) { empty.style.display = 'block'; area.innerHTML = ''; return; }
   empty.style.display = 'none';
 
+  // 按班级分组
+  const groups = {};
+  tips.forEach(r => {
+    const cls = r['班级'] || '未知';
+    if (!groups[cls]) groups[cls] = [];
+    groups[cls].push(r);
+  });
+  const clsSorted = Object.keys(groups).sort();
+
   let html = '';
-  tips.reverse().forEach((r, i) => {
-    html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);' + (i % 2 === 0 ? 'background:#FFFDF5' : '') + '">';
-    html += '<span style="font-size:11px;color:var(--text-muted);margin-right:10px">' + (r['班级'] || '') + ' · ' + (r['提交时间'] || '') + '</span>';
-    html += '<span style="font-size:13px;color:var(--text)">' + r['建议'] + '</span>';
+  clsSorted.forEach(cls => {
+    const items = groups[cls];
+    html += '<div class="config-class" style="margin-bottom:8px">';
+    html += '<div class="config-class-header" onclick="this.nextElementSibling.classList.toggle(\'open\')">';
+    html += '📘 ' + cls + ' <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:6px">' + items.length + ' 条建议</span>';
     html += '</div>';
+    html += '<div class="config-class-body">';
+    items.reverse().forEach((r, i) => {
+      html += '<div style="padding:8px 14px;border-bottom:1px solid var(--border);' + (i % 2 === 0 ? 'background:#FFFDF5' : '') + '">';
+      html += '<span style="font-size:10px;color:var(--text-muted);margin-right:8px">' + (r['提交时间'] || '') + '</span>';
+      html += '<span style="font-size:13px;color:var(--text)">' + r['建议'] + '</span>';
+      html += '</div>';
+    });
+    html += '</div></div>';
   });
   area.innerHTML = html;
 }
