@@ -420,7 +420,7 @@ async function syncPull(){
     }
   }catch(e){console.warn('Sync pull failed:',e.message);}
 }
-setInterval(syncPull,10000);setTimeout(syncPull,1500);
+setInterval(syncPull,2000);setTimeout(syncPull,300);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
 function saveConfigToStorage(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
