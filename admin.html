@@ -397,7 +397,7 @@ async function syncPull(){
     }
   }catch(e){console.warn('Sync pull failed:',e.message);}
 }
-setTimeout(syncPull, 100);
+setTimeout(syncPull, 50);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
 function saveConfigToStorage(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
@@ -444,9 +444,11 @@ function showToast(msg, type) {
 }
 
 // ==================== 仪表盘 ====================
+let syncTimer = null;
 function initDashboard() {
   forceRefresh();
-  setInterval(syncPull, 1500);
+  if (syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(syncPull, 1000);
 }
 
 let eventBound = false;
@@ -691,11 +693,21 @@ function parseCSVLine(l){const r=[];let c='',q=false;for(let ch of l){if(ch==='"
 async function confirmClear(){
   if(!confirm('确定清空所有数据？不可恢复！'))return;
   if(!confirm('再次确认：清空全部 '+loadRecords().length+' 条？'))return;
-  saveRecords([]);
-  // 直接推空数组到 GitHub
-  const content=utf8ToB64('[]');
-  await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'clear all data',content,sha:gDataSHA,branch:'main'})});
-  showToast('已清空');initDashboard();
+
+  // 1. 获取最新 SHA
+  try {
+    const r = await fetch(GH_API, {headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
+    if (r.ok) {
+      const j = await r.json();
+      // 2. 推送空数组
+      const content = utf8ToB64('[]');
+      await fetch(GH_API, {method:'PUT', headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'}, body:JSON.stringify({message:'clear all data', content, sha:j.sha, branch:'main'})});
+    }
+  } catch(e) {}
+
+  // 3. 清空本地 + 重新初始化
+  localStorage.removeItem(DATA_KEY);
+  showToast('已清空'); initDashboard();
 }
 
 // ==================== 问卷配置面板 ====================
