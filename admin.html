@@ -204,14 +204,15 @@ tr:hover { background:#FFFDF5; }
   <div id="tab-dashboard">
     <div class="stats-grid" id="statsCards"></div>
     <div class="section">
-      <div class="section-title">🏆 各班级教师评分排名</div>
-      <div class="table-wrap" id="teacherRankWrap">
-        <table><thead><tr>
-          <th>排名</th><th>班级</th><th>科目</th><th>教师</th>
-          <th>讲课均分</th><th>辅导均分</th><th>点评均分</th>
-          <th>总均分</th>
-        </tr></thead><tbody id="teacherRankBody"></tbody></table>
+      <div class="section-title">🏆 各班级教师评分</div>
+      <div id="teacherRankArea">
         <div class="empty-state" id="teacherRankEmpty"><p style="font-size:13px">暂无评分数据</p></div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">💬 学生建议汇总</div>
+      <div id="suggestArea">
+        <div class="empty-state" id="suggestEmpty"><p style="font-size:13px">暂无建议</p></div>
       </div>
     </div>
     <div class="section">
@@ -473,7 +474,7 @@ function initDashboard() {
 }
 
 function refreshAll() {
-  renderStats(); renderTable(); renderTeacherRanking();
+  renderStats(); renderTable(); renderTeacherRanking(); renderSuggestions();
   document.getElementById('tableCount').textContent = '共 '+loadRecords().length+' 条';
 }
 
@@ -531,59 +532,94 @@ function renderTable() {
 
 function renderTeacherRanking() {
   const records = loadRecords();
-  const tbody = document.getElementById('teacherRankBody');
+  const area = document.getElementById('teacherRankArea');
   const empty = document.getElementById('teacherRankEmpty');
-  if (!records.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  if (!records.length) { area.innerHTML = ''; area.appendChild(empty); empty.style.display = 'block'; return; }
   empty.style.display = 'none';
 
-  // 按 班级+科目+老师 聚合：{老师名: {班级,科目,讲课:[],辅导:[],点评:[]}}
-  const teacherMap = {};
+  // 按 班级→科目→老师 聚合
+  const classMap = {};
   records.forEach(r => {
     const cls = r['班级'] || '未知';
+    if (!classMap[cls]) classMap[cls] = {};
     ['静物','色彩','速写','头像'].forEach(sub => {
       const teachers = (r[sub + '老师'] || '').split(',').map(t => t.trim()).filter(Boolean);
+      if (!classMap[cls][sub]) classMap[cls][sub] = {};
       teachers.forEach(tName => {
-        const key = cls + '|' + sub + '|' + tName;
-        if (!teacherMap[key]) teacherMap[key] = { 班级: cls, 科目: sub, 教师: tName, 讲课: [], 辅导: [], 点评: [] };
+        if (!classMap[cls][sub][tName]) classMap[cls][sub][tName] = { 讲课: [], 辅导: [], 点评: [] };
         ['讲课','辅导','点评'].forEach(k => {
           const v = Number(r[sub + k]);
-          if (!isNaN(v) && v > 0) teacherMap[key][k].push(v);
+          if (!isNaN(v) && v > 0) classMap[cls][sub][tName][k].push(v);
         });
       });
     });
   });
 
-  // 计算均分并排序
-  const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
-  let list = Object.values(teacherMap).map(t => {
-    const l = avg(t.讲课), tu = avg(t.辅导), r = avg(t.点评);
-    return { ...t, 讲课均分: l, 辅导均分: tu, 点评均分: r, 总均分: (l + tu + r) / 3 };
-  }).sort((a, b) => b.总均分 - a.总均分);
-
-  const topScore = list.length ? list[0].总均分 : 10;
-  const badge = (val, max) => {
-    const n = Number(val), pct = max > 0 ? n / max : 0;
-    let cls = 'adm-badge ';
-    if (pct >= 0.85) cls += 'adm-badge-high';
-    else if (pct >= 0.65) cls += 'adm-badge-mid';
-    else cls += 'adm-badge-low';
-    return '<span class="' + cls + '">' + n.toFixed(1) + '</span>';
+  const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : '-';
+  const badge = (val) => {
+    const n = Number(val); if (isNaN(n)) return '<span class="adm-badge">-</span>';
+    return '<span class="adm-badge ' + (n >= 7.5 ? 'adm-badge-high' : n >= 5 ? 'adm-badge-mid' : 'adm-badge-low') + '">' + n.toFixed(1) + '</span>';
   };
 
-  tbody.innerHTML = list.map((t, i) => {
-    const rank = i + 1;
-    const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
-    return '<tr>' +
-      '<td><strong>' + rankIcon + '</strong></td>' +
-      '<td>' + t.班级 + '</td>' +
-      '<td>' + t.科目 + '</td>' +
-      '<td><strong>' + t.教师 + '</strong></td>' +
-      '<td>' + badge(t.讲课均分, topScore) + '</td>' +
-      '<td>' + badge(t.辅导均分, topScore) + '</td>' +
-      '<td>' + badge(t.点评均分, topScore) + '</td>' +
-      '<td><strong>' + t.总均分.toFixed(1) + '</strong></td>' +
-      '</tr>';
-  }).join('');
+  let html = '';
+  const clsSorted = Object.keys(classMap).sort();
+  clsSorted.forEach((cls, ci) => {
+    html += '<div class="config-class" style="margin-bottom:10px">';
+    html += '<div class="config-class-header" onclick="this.nextElementSibling.classList.toggle(\'open\')">📘 ' + cls + '</div>';
+    html += '<div class="config-class-body" style="padding:12px 16px">';
+
+    const subs = classMap[cls];
+    ['静物','色彩','速写','头像'].forEach(sub => {
+      const teachers = subs[sub];
+      if (!teachers) return;
+
+      // 所有老师，按总均分排序
+      const tList = Object.entries(teachers).map(([name, scores]) => {
+        const l = Number(avg(scores['讲课'])), t = Number(avg(scores['辅导'])), r = Number(avg(scores['点评']));
+        return { name, l, t, r, total: ((l + t + r) / 3) };
+      }).sort((a, b) => b.total - a.total);
+
+      html += '<div style="margin-bottom:12px">';
+      html += '<div style="font-weight:600;font-size:13px;color:var(--primary);margin-bottom:6px;display:flex;align-items:center;gap:6px"><span style="background:var(--primary);color:#fff;border-radius:4px;padding:1px 6px;font-size:11px">' + sub + '</span> ' + tList.length + ' 位老师</div>';
+      html += '<table style="width:100%;font-size:12px"><thead><tr style="background:var(--primary-light)"><th style="padding:6px 8px;text-align:left;border-radius:4px 0 0 4px">教师</th><th style="padding:6px 8px">讲课</th><th style="padding:6px 8px">辅导</th><th style="padding:6px 8px">点评</th><th style="padding:6px 8px;border-radius:0 4px 4px 0">均分</th></tr></thead><tbody>';
+      tList.forEach((t, i) => {
+        html += '<tr style="' + (i % 2 === 0 ? 'background:#FFFDF5' : '') + '">';
+        html += '<td style="padding:6px 8px"><strong>' + t.name + '</strong></td>';
+        html += '<td style="padding:6px 8px;text-align:center">' + badge(t.l) + '</td>';
+        html += '<td style="padding:6px 8px;text-align:center">' + badge(t.t) + '</td>';
+        html += '<td style="padding:6px 8px;text-align:center">' + badge(t.r) + '</td>';
+        html += '<td style="padding:6px 8px;text-align:center"><strong>' + t.total.toFixed(1) + '</strong></td>';
+        html += '</tr>';
+      });
+      html += '</tbody></table>';
+      html += '</div>';
+    });
+
+    html += '</div></div>';
+  });
+
+  area.innerHTML = html;
+  document.getElementById('suggestEmpty').style.display = records.length ? 'none' : 'block';
+}
+
+// 建议汇总
+function renderSuggestions() {
+  const records = loadRecords();
+  const area = document.getElementById('suggestArea');
+  const empty = document.getElementById('suggestEmpty');
+  if (!records.length) { empty.style.display = 'block'; return; }
+  const tips = records.filter(r => r['建议'] && r['建议'] !== '-' && r['建议'].trim());
+  if (!tips.length) { empty.style.display = 'block'; area.innerHTML = ''; return; }
+  empty.style.display = 'none';
+
+  let html = '';
+  tips.reverse().forEach((r, i) => {
+    html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);' + (i % 2 === 0 ? 'background:#FFFDF5' : '') + '">';
+    html += '<span style="font-size:11px;color:var(--text-muted);margin-right:10px">' + (r['班级'] || '') + ' · ' + (r['提交时间'] || '') + '</span>';
+    html += '<span style="font-size:13px;color:var(--text)">' + r['建议'] + '</span>';
+    html += '</div>';
+  });
+  area.innerHTML = html;
 }
 
 // ==================== 导入导出 ====================
