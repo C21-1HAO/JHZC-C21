@@ -691,12 +691,26 @@ function saveRecords(r){localStorage.setItem(SK,JSON.stringify(r));syncPush(r);}
 
 async function syncPush(records){
   if(gSyncing)return;gSyncing=true;
-  try{
-    if(!gDataSHA){const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});if(r.ok){const j=await r.json();gDataSHA=j.sha;}}
-    const content=utf8ToB64(JSON.stringify(records));
-    const r=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'student submit',content:content,sha:gDataSHA,branch:'main'})});
-    if(r.ok){const j=await r.json();gDataSHA=j.content.sha;}
-  }catch(e){console.warn('Sync push failed, saved locally:',e.message);}
+  for(let retry=0;retry<3;retry++){
+    try{
+      // 1. 拉取远程最新数据
+      const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
+      if(!r.ok)break;
+      const j=await r.json();
+      const sha=j.sha;
+      let remote=JSON.parse(b64ToUtf8(j.content));
+      // 2. 合并：去重，保留远程已有的，追加本地新增的
+      const remoteIds=new Set(remote.map(x=>x.id));
+      const newItems=records.filter(x=>!remoteIds.has(x.id));
+      if(newItems.length===0){gDataSHA=sha;break;} // 无新数据，只更新SHA
+      remote=[...remote,...newItems];
+      // 3. 推送合并后的数据
+      const content=utf8ToB64(JSON.stringify(remote));
+      const r2=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'student submit',content,sha,branch:'main'})});
+      if(r2.ok){const j2=await r2.json();gDataSHA=j2.content.sha;localStorage.setItem(SK,JSON.stringify(remote));break;}
+      // SHA冲突则重试
+    }catch(e){if(retry===2)console.warn('Sync failed:',e.message);}
+  }
   gSyncing=false;
 }
 
