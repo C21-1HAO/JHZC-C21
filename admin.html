@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>姜浩张超画室 - 管理后台</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root {
   --primary: #D97706; --primary-dark: #92400E; --primary-light: #FEF3C7;
@@ -61,11 +60,6 @@ body {
   border-radius:14px; padding:20px; margin-bottom:16px;
 }
 .section-title { font-size:16px; font-weight:600; margin-bottom:14px; }
-
-.charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
-.chart-box { background:var(--card-bg); border:1px solid var(--border); border-radius:14px; padding:20px; }
-.chart-box h3 { font-size:14px; font-weight:600; margin-bottom:12px; }
-.chart-box canvas { max-height:300px; }
 
 /* Table */
 .table-wrap { overflow-x:auto; }
@@ -171,7 +165,6 @@ tr:hover { background:#FFFDF5; }
 .empty-state svg { width:64px; height:64px; color:var(--border); margin-bottom:12px; }
 
 @media (max-width:768px) {
-  .charts-row { grid-template-columns:1fr; }
   .stats-grid { grid-template-columns:1fr 1fr; }
 }
 </style>
@@ -210,13 +203,16 @@ tr:hover { background:#FFFDF5; }
   <!-- ============ TAB: 数据看板 ============ -->
   <div id="tab-dashboard">
     <div class="stats-grid" id="statsCards"></div>
-    <div class="charts-row">
-      <div class="chart-box"><h3>各科目平均评分</h3><canvas id="chartSubject"></canvas></div>
-      <div class="chart-box"><h3>班级提交分布</h3><canvas id="chartClass"></canvas></div>
-    </div>
-    <div class="charts-row">
-      <div class="chart-box"><h3>三餐宿舍评分趋势</h3><canvas id="chartOther"></canvas></div>
-      <div class="chart-box"><h3>教师评分排行 TOP10</h3><canvas id="chartTeacher"></canvas></div>
+    <div class="section">
+      <div class="section-title">🏆 各班级教师评分排名</div>
+      <div class="table-wrap" id="teacherRankWrap">
+        <table><thead><tr>
+          <th>排名</th><th>班级</th><th>科目</th><th>教师</th>
+          <th>讲课均分</th><th>辅导均分</th><th>点评均分</th>
+          <th>总均分</th>
+        </tr></thead><tbody id="teacherRankBody"></tbody></table>
+        <div class="empty-state" id="teacherRankEmpty"><p style="font-size:13px">暂无评分数据</p></div>
+      </div>
     </div>
     <div class="section">
       <div class="section-title">📋 提交记录</div>
@@ -477,7 +473,7 @@ function initDashboard() {
 }
 
 function refreshAll() {
-  renderStats(); renderTable(); renderCharts();
+  renderStats(); renderTable(); renderTeacherRanking();
   document.getElementById('tableCount').textContent = '共 '+loadRecords().length+' 条';
 }
 
@@ -533,61 +529,61 @@ function renderTable() {
   }).join('');
 }
 
-let charts = {};
-function renderCharts() {
+function renderTeacherRanking() {
   const records = loadRecords();
-  Object.values(charts).forEach(c=>c.destroy()); charts={};
-  if(!records.length) return;
+  const tbody = document.getElementById('teacherRankBody');
+  const empty = document.getElementById('teacherRankEmpty');
+  if (!records.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+  empty.style.display = 'none';
 
-  // 各科目平均分（讲课+辅导+点评的平均）
-  const subjData={};
-  ['静物','色彩','速写','头像'].forEach(sub=>{
-    const vals=records.flatMap(r=>[r[sub+'讲课'],r[sub+'辅导'],r[sub+'点评']].map(Number).filter(n=>!isNaN(n)&&n>0));
-    subjData[sub]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;
-  });
-  charts.chartSubject = new Chart(document.getElementById('chartSubject'),{
-    type:'bar',data:{labels:Object.keys(subjData),datasets:[{label:'平均分',data:Object.values(subjData),backgroundColor:'#F59E0B',borderRadius:6}]},
-    options:{scales:{y:{beginAtZero:true,max:10,ticks:{stepSize:2}}},plugins:{legend:{display:false}}}
-  });
-
-  const classCount={};
-  records.forEach(r=>{const c=r['班级']||'未知';classCount[c]=(classCount[c]||0)+1;});
-  const clsSorted=Object.entries(classCount).sort((a,b)=>b[1]-a[1]);
-  charts.chartClass = new Chart(document.getElementById('chartClass'),{
-    type:'bar',data:{labels:clsSorted.map(e=>e[0]),datasets:[{label:'提交数',data:clsSorted.map(e=>e[1]),backgroundColor:'#D97706',borderRadius:6}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false}}}
-  });
-
-  const otherData={};
-  ['饭菜评分','饭堂服务评分','宿舍管理评分','宿管服务评分'].forEach(k=>{
-    const vals=records.map(r=>Number(r[k])).filter(n=>!isNaN(n)&&n>0);
-    otherData[k.replace('评分','')]=vals.length?(vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1):0;
-  });
-  charts.chartOther = new Chart(document.getElementById('chartOther'),{
-    type:'bar',data:{labels:Object.keys(otherData),datasets:[{label:'平均分',data:Object.values(otherData),backgroundColor:['#F59E0B','#D97706','#92400E','#78350F'],borderRadius:6}]},
-    options:{scales:{y:{beginAtZero:true,max:10,ticks:{stepSize:2}}},plugins:{legend:{display:false}}}
-  });
-
-  // 教师评分排行：从每条记录中把老师名拆分，平均分计算
-  const teacherScores={};
-  records.forEach(r=>{
-    ['静物','色彩','速写','头像'].forEach(sub=>{
-      const teachers = (r[sub+'老师']||'').split(',').map(t=>t.trim()).filter(Boolean);
+  // 按 班级+科目+老师 聚合：{老师名: {班级,科目,讲课:[],辅导:[],点评:[]}}
+  const teacherMap = {};
+  records.forEach(r => {
+    const cls = r['班级'] || '未知';
+    ['静物','色彩','速写','头像'].forEach(sub => {
+      const teachers = (r[sub + '老师'] || '').split(',').map(t => t.trim()).filter(Boolean);
       teachers.forEach(tName => {
-        ['讲课','辅导','点评'].forEach(k=>{
-          const v=Number(r[sub+k]); if(!isNaN(v)&&v>0){
-            if(!teacherScores[tName]) teacherScores[tName]=[];
-            teacherScores[tName].push(v);
-          }
+        const key = cls + '|' + sub + '|' + tName;
+        if (!teacherMap[key]) teacherMap[key] = { 班级: cls, 科目: sub, 教师: tName, 讲课: [], 辅导: [], 点评: [] };
+        ['讲课','辅导','点评'].forEach(k => {
+          const v = Number(r[sub + k]);
+          if (!isNaN(v) && v > 0) teacherMap[key][k].push(v);
         });
       });
     });
   });
-  const teacherAvg=Object.entries(teacherScores).map(([n,s])=>({name:n,avg:s.reduce((a,b)=>a+b,0)/s.length})).sort((a,b)=>b.avg-a.avg).slice(0,10);
-  charts.chartTeacher = new Chart(document.getElementById('chartTeacher'),{
-    type:'bar',data:{labels:teacherAvg.map(e=>e.name),datasets:[{label:'教师均分',data:teacherAvg.map(e=>e.avg.toFixed(1)),backgroundColor:'#F59E0B',borderRadius:6}]},
-    options:{indexAxis:'y',plugins:{legend:{display:false}},scales:{x:{beginAtZero:true,max:10,ticks:{stepSize:2}}}}
-  });
+
+  // 计算均分并排序
+  const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length) : 0;
+  let list = Object.values(teacherMap).map(t => {
+    const l = avg(t.讲课), tu = avg(t.辅导), r = avg(t.点评);
+    return { ...t, 讲课均分: l, 辅导均分: tu, 点评均分: r, 总均分: (l + tu + r) / 3 };
+  }).sort((a, b) => b.总均分 - a.总均分);
+
+  const topScore = list.length ? list[0].总均分 : 10;
+  const badge = (val, max) => {
+    const n = Number(val), pct = max > 0 ? n / max : 0;
+    let cls = 'adm-badge ';
+    if (pct >= 0.85) cls += 'adm-badge-high';
+    else if (pct >= 0.65) cls += 'adm-badge-mid';
+    else cls += 'adm-badge-low';
+    return '<span class="' + cls + '">' + n.toFixed(1) + '</span>';
+  };
+
+  tbody.innerHTML = list.map((t, i) => {
+    const rank = i + 1;
+    const rankIcon = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank;
+    return '<tr>' +
+      '<td><strong>' + rankIcon + '</strong></td>' +
+      '<td>' + t.班级 + '</td>' +
+      '<td>' + t.科目 + '</td>' +
+      '<td><strong>' + t.教师 + '</strong></td>' +
+      '<td>' + badge(t.讲课均分, topScore) + '</td>' +
+      '<td>' + badge(t.辅导均分, topScore) + '</td>' +
+      '<td>' + badge(t.点评均分, topScore) + '</td>' +
+      '<td><strong>' + t.总均分.toFixed(1) + '</strong></td>' +
+      '</tr>';
+  }).join('');
 }
 
 // ==================== 导入导出 ====================
