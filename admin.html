@@ -204,6 +204,7 @@ tr:hover { background:#FFFDF5; }
   <div class="tabs">
     <button class="tab active" onclick="switchTab('dashboard',this)">📊 数据看板</button>
     <button class="tab" onclick="switchTab('config',this)">⚙️ 问卷配置</button>
+    <button class="tab" onclick="switchTab('round',this)">🔓 填写管理</button>
   </div>
 
   <!-- ============ TAB: 数据看板 ============ -->
@@ -278,6 +279,34 @@ tr:hover { background:#FFFDF5; }
         <span class="link-url" id="studentLink">尚未生成</span>
       </div>
       <div class="qr-wrap" id="qrCodeWrap" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- ============ TAB: 填写管理 ============ -->
+  <div id="tab-round" style="display:none">
+    <div class="section">
+      <div class="section-title">🔓 填写轮次管理</div>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+        当前轮次：<strong id="roundCurrent">--</strong> &nbsp;|&nbsp; 
+        开启新轮次后，所有学生可重新填写问卷
+      </p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="startNewRound()">🔄 开启新一轮填写</button>
+        <button class="btn btn-outline" onclick="genUnlockLink()">🔗 生成单设备解锁链接</button>
+      </div>
+      <div class="link-box" id="unlockLinkBox" style="display:none">
+        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">解锁链接：</span>
+        <span class="link-url" id="unlockUrl">--</span>
+        <button class="btn btn-outline btn-sm" onclick="copyUnlockLink()">📋 复制</button>
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title">📜 操作记录</div>
+      <div class="table-wrap">
+        <table><thead><tr><th>操作时间</th><th>轮次</th><th>操作描述</th><th>操作人</th></tr></thead>
+        <tbody id="roundHistoryBody"></tbody></table>
+        <div class="empty-state" id="roundEmpty"><p style="font-size:13px">暂无操作记录</p></div>
+      </div>
     </div>
   </div>
 
@@ -415,8 +444,10 @@ function switchTab(tab, btn) {
   btn.classList.add('active');
   document.getElementById('tab-dashboard').style.display = tab==='dashboard'?'block':'none';
   document.getElementById('tab-config').style.display = tab==='config'?'block':'none';
+  document.getElementById('tab-round').style.display = tab==='round'?'block':'none';
   if (tab === 'config') renderConfigPanel();
   if (tab === 'dashboard') initDashboard();
+  if (tab === 'round') initRoundPanel();
 }
 
 // ==================== Toast ====================
@@ -695,6 +726,93 @@ function deleteClass(cls) {
   delete editingConfig[cls];
   saveConfigToStorage(editingConfig);
   renderConfigPanel();
+}
+
+// ==================== 填写轮次管理 ====================
+const ROUND_API = 'https://api.github.com/repos/C21-1HAO/JHZC-C21/contents/data/survey_round.json';
+let roundInfo = null, roundSHA = null;
+
+async function initRoundPanel() {
+  await loadRoundInfo();
+  renderRoundPanel();
+}
+
+async function loadRoundInfo() {
+  try {
+    const r = await fetch(ROUND_API, { headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json' } });
+    if (!r.ok) return;
+    const j = await r.json();
+    roundSHA = j.sha;
+    roundInfo = JSON.parse(b64ToUtf8(j.content));
+  } catch (e) { roundInfo = { round: 1, history: [] }; }
+}
+
+function renderRoundPanel() {
+  if (!roundInfo) return;
+  document.getElementById('roundCurrent').textContent = '第 ' + roundInfo.round + ' 轮';
+  const tbody = document.getElementById('roundHistoryBody');
+  const hist = roundInfo.history || [];
+  if (!hist.length) {
+    document.getElementById('roundEmpty').style.display = 'block';
+    tbody.innerHTML = '';
+  } else {
+    document.getElementById('roundEmpty').style.display = 'none';
+    tbody.innerHTML = hist.slice().reverse().map(h =>
+      '<tr><td>' + h.time + '</td><td>' + h.round + '</td><td>' + h.action + '</td><td>' + (h.updated_by || 'admin') + '</td></tr>'
+    ).join('');
+  }
+}
+
+async function startNewRound() {
+  if (!confirm('确认开启新一轮填写？\n\n开启后，所有已填写过的学生将可以重新填写问卷。\n此操作不可撤销。')) return;
+  if (!confirm('再次确认：开启第 ' + (roundInfo.round + 1) + ' 轮填写？')) return;
+
+  const now = new Date().toLocaleString('zh-CN');
+  roundInfo.round++;
+  roundInfo.updated_at = now;
+  roundInfo.updated_by = 'admin';
+  roundInfo.history.push({ round: roundInfo.round, action: '开启新一轮填写', time: now, updated_by: 'admin' });
+
+  try {
+    const content = utf8ToB64(JSON.stringify(roundInfo));
+    const body = JSON.stringify({ message: 'new survey round ' + roundInfo.round, content, sha: roundSHA, branch: 'main' });
+    const r = await fetch(ROUND_API, { method: 'PUT', headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body });
+    if (r.ok) { const j = await r.json(); roundSHA = j.content.sha; showToast('已开启第 ' + roundInfo.round + ' 轮填写！所有学生可重新填'); }
+    else showToast('操作失败，请重试', 'warning');
+  } catch (e) { showToast('网络错误', 'warning'); }
+  renderRoundPanel();
+}
+
+function genUnlockLink() {
+  const base = window.location.href.replace(/admin\.html.*$/, 'student.html');
+  const url = base + '?unlock=1';
+  document.getElementById('unlockUrl').textContent = url;
+  document.getElementById('unlockLinkBox').style.display = 'flex';
+  const now = new Date().toLocaleString('zh-CN');
+  if (!roundInfo) roundInfo = { round: 1, history: [] };
+  roundInfo.history.push({ round: roundInfo.round, action: '生成单设备解锁链接', time: now, updated_by: 'admin' });
+  saveRoundLog();
+  showToast('解锁链接已生成，发给学生即可');
+}
+
+async function saveRoundLog() {
+  try {
+    if (!roundSHA) return;
+    const content = utf8ToB64(JSON.stringify(roundInfo));
+    const body = JSON.stringify({ message: 'update round log', content, sha: roundSHA, branch: 'main' });
+    const r = await fetch(ROUND_API, { method: 'PUT', headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body });
+    if (r.ok) { const j = await r.json(); roundSHA = j.content.sha; }
+  } catch (e) { }
+}
+
+function copyUnlockLink() {
+  const url = document.getElementById('unlockUrl').textContent;
+  navigator.clipboard.writeText(url).then(() => showToast('已复制')).catch(() => {
+    const el = document.getElementById('unlockUrl');
+    const range = document.createRange(); range.selectNode(el);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+    document.execCommand('copy'); showToast('已复制');
+  });
 }
 
 // ==================== 生成学生链接 ====================
