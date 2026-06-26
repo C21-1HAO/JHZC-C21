@@ -420,7 +420,11 @@ const DEFAULT_CONFIG = {
 };
 const SUBJECTS = ['静物','色彩','速写','头像'];
 
-function getConfig() { return loadConfig() || JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+function getConfig() {
+  const cfg = loadConfig();
+  if (cfg && typeof cfg === 'object' && Object.keys(cfg).length > 0) return cfg;
+  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+}
 
 // ==================== Tabs ====================
 function switchTab(tab, btn) {
