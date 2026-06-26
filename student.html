@@ -640,7 +640,7 @@ function submitForm() {
   const all = loadRecords();
   const ts = new Date().toLocaleString('zh-CN');
   const record = {
-    id: Date.now(), '提交时间': ts, 班级: cls,
+    id: Date.now(), timestamp: ts, 班级: cls,
     静物老师: subjectData['静物']?.teacher || '', 静物讲课: subjectData['静物']?.lecture || 0, 静物辅导: subjectData['静物']?.tutoring || 0, 静物点评: subjectData['静物']?.review || 0,
     色彩老师: subjectData['色彩']?.teacher || '', 色彩讲课: subjectData['色彩']?.lecture || 0, 色彩辅导: subjectData['色彩']?.tutoring || 0, 色彩点评: subjectData['色彩']?.review || 0,
     速写老师: subjectData['速写']?.teacher || '', 速写讲课: subjectData['速写']?.lecture || 0, 速写辅导: subjectData['速写']?.tutoring || 0, 速写点评: subjectData['速写']?.review || 0,
@@ -691,26 +691,12 @@ function saveRecords(r){localStorage.setItem(SK,JSON.stringify(r));syncPush(r);}
 
 async function syncPush(records){
   if(gSyncing)return;gSyncing=true;
-  for(let retry=0;retry<3;retry++){
-    try{
-      // 1. 拉取远程最新数据
-      const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
-      if(!r.ok)break;
-      const j=await r.json();
-      const sha=j.sha;
-      let remote=JSON.parse(b64ToUtf8(j.content));
-      // 2. 合并：去重，保留远程已有的，追加本地新增的
-      const remoteIds=new Set(remote.map(x=>x.id));
-      const newItems=records.filter(x=>!remoteIds.has(x.id));
-      if(newItems.length===0){gDataSHA=sha;break;} // 无新数据，只更新SHA
-      remote=[...remote,...newItems];
-      // 3. 推送合并后的数据
-      const content=utf8ToB64(JSON.stringify(remote));
-      const r2=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'student submit',content,sha,branch:'main'})});
-      if(r2.ok){const j2=await r2.json();gDataSHA=j2.content.sha;localStorage.setItem(SK,JSON.stringify(remote));break;}
-      // SHA冲突则重试
-    }catch(e){if(retry===2)console.warn('Sync failed:',e.message);}
-  }
+  try{
+    if(!gDataSHA){const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});if(r.ok){const j=await r.json();gDataSHA=j.sha;}}
+    const content=utf8ToB64(JSON.stringify(records));
+    const r=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'student submit',content:content,sha:gDataSHA,branch:'main'})});
+    if(r.ok){const j=await r.json();gDataSHA=j.content.sha;}
+  }catch(e){console.warn('Sync push failed, saved locally:',e.message);}
   gSyncing=false;
 }
 
@@ -753,20 +739,16 @@ function loadConfig() {
   return null;
 }
 
-// ==================== 防重复提交 & 轮次管理 ====================
+// ==================== 防重复提交 ====================
 const SUBMITTED_KEY = 'jhzc_survey_submitted';
-const ROUND_KEY = 'jhzc_survey_round';
-const ROUND_URL = 'https://raw.githubusercontent.com/C21-1HAO/JHZC-C21/main/data/survey_round.json';
 
-// 清除提交标记，允许重新填写
-function clearSubmitted() {
-  try { localStorage.removeItem(SUBMITTED_KEY); } catch {}
-  document.cookie = SUBMITTED_KEY + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
-}
-
-// 检查是否被锁定
 function isSubmitted() {
-  try { if (localStorage.getItem(SUBMITTED_KEY)) return true; } catch {}
+  // localStorage 检查
+  try {
+    const flag = localStorage.getItem(SUBMITTED_KEY);
+    if (flag) return true;
+  } catch {}
+  // Cookie 检查（更持久）
   if (document.cookie.indexOf(SUBMITTED_KEY + '=1') !== -1) return true;
   return false;
 }
@@ -774,41 +756,12 @@ function isSubmitted() {
 function markSubmitted() {
   const now = new Date().toLocaleString('zh-CN');
   try { localStorage.setItem(SUBMITTED_KEY, now); } catch {}
+  // 设置 Cookie，有效期 365 天
   const d = new Date(); d.setFullYear(d.getFullYear() + 1);
   document.cookie = SUBMITTED_KEY + '=1; expires=' + d.toUTCString() + '; path=/';
-  // 记录当前轮次
-  try { localStorage.setItem(ROUND_KEY, String(gCurrentRound || 1)); } catch {}
 }
 
-// 检查全局轮次，若已过期则自动解锁
-let gCurrentRound = 1;
-async function checkRoundAndUnlock() {
-  try {
-    const r = await fetch(ROUND_URL + '?t=' + Date.now());
-    if (!r.ok) return;
-    const data = await r.json();
-    gCurrentRound = data.round || 1;
-    const localRound = parseInt(localStorage.getItem(ROUND_KEY) || '0');
-    if (gCurrentRound > localRound) {
-      clearSubmitted();
-      localStorage.setItem(ROUND_KEY, String(gCurrentRound));
-    }
-  } catch (e) {}
-}
-
-// URL解锁参数
-(function () {
-  if (new URLSearchParams(window.location.search).get('unlock') === '1') {
-    clearSubmitted();
-    localStorage.removeItem(ROUND_KEY);
-    history.replaceState(null, '', window.location.pathname);
-  }
-})();
-
-document.addEventListener('DOMContentLoaded', async () => {
-  // 先检查轮次（可能自动解锁）
-  await checkRoundAndUnlock();
-
+document.addEventListener('DOMContentLoaded', () => {
   // 检查是否已提交
   if (isSubmitted()) {
     document.querySelector('.container').style.display = 'none';
