@@ -324,7 +324,7 @@ function loadTestData() {
   const p = new URLSearchParams(window.location.search);
   if (!p.get('test')) return;
   const now = Date.now();
-  const classes = ['清央国定制班','定制班','超能1班','超能2班','超能3班','超重1班','火箭1班','火箭2班','新兴华侨','全能班','丰泰定制班','超能4班','超重2班','南海艺高','火箭2班'];
+  const classes = ['清央国定制班','定制班','超能1班','超能2班','超能3班','超重1班','火箭1班','火箭2班','新兴华侨','全能班','丰泰定制班','超能4班','超重2班','南海艺高'];
   const teachers = {
     静物: ['周中希','劳家斌','郑祖聪','朱传渠','何鸿海','谢维俊','吴泽鹏','叶文澎','张树华','罗屏','陈帆','李高技','蔡梦龙','何永强'],
     色彩: ['敖卓劲,孔何','周德涛,洪振中','李红亮','邓长征','鄢正端','陈晓东','李聪','梁天胜','冯世龙','苏海云','莫华荣','陈傲','谢贯通','陈淦全'],
@@ -338,7 +338,7 @@ function loadTestData() {
     const ci = i % classes.length;
     const ts = new Date(now - i * 1800000);
     const t = ts.getFullYear()+'/'+String(ts.getMonth()+1).padStart(2,'0')+'/'+String(ts.getDate()).padStart(2,'0')+' '+String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0')+':'+String(ts.getSeconds()).padStart(2,'0');
-    const rec = {id: now - i*1800000, timestamp: t, 班级: classes[ci]};
+    const rec = {id: now - i*1800000, '提交时间': t, 班级: classes[ci]};
     ['静物','色彩','速写','头像'].forEach(sub => {
       rec[sub+'老师'] = teachers[sub][ci];
       rec[sub+'讲课'] = Math.floor(Math.random()*7)+4;
@@ -385,7 +385,9 @@ async function syncMergePush(records){
   }
   gSyncing=false;
 }
+let syncPullLock = false;
 async function syncPull(){
+  if(syncPullLock)return;syncPullLock=true;
   try{
     const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});if(!r.ok)return;
     const j=await r.json();gDataSHA=j.sha;
@@ -396,6 +398,7 @@ async function syncPull(){
       window.dispatchEvent(new Event('data-updated'));
     }
   }catch(e){console.warn('Sync pull failed:',e.message);}
+  syncPullLock=false;
 }
 setTimeout(syncPull, 50);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
@@ -433,6 +436,7 @@ function switchTab(tab, btn) {
   document.getElementById('tab-dashboard').style.display = tab==='dashboard'?'block':'none';
   document.getElementById('tab-config').style.display = tab==='config'?'block':'none';
   document.getElementById('tab-round').style.display = tab==='round'?'block':'none';
+  if (tab !== 'dashboard' && syncTimer) { clearInterval(syncTimer); syncTimer = null; }
   if (tab === 'config') renderConfigPanel();
   if (tab === 'dashboard') initDashboard();
   if (tab === 'round') initRoundPanel();
@@ -501,7 +505,7 @@ function renderStats() {
 function renderTable() {
   const records = loadRecords();
   const q = (document.getElementById('searchInput')?.value||'').toLowerCase();
-  const filtered = q?records.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q))):records.slice().reverse();
+  const filtered = q?records.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q))).reverse():records.slice().reverse();
   document.getElementById('tableCount').textContent = '共 '+filtered.length+' 条';
   const empty = document.getElementById('emptyTable');
   const tbody = document.querySelector('#dataTable tbody');
@@ -536,11 +540,11 @@ function renderPagination(page, total, totalRecords) {
   const pagination = document.getElementById('pageNav');
   if (total <= 1) { pagination.innerHTML = ''; return; }
   let html = '<div style="display:flex;align-items:center;gap:6px;justify-content:center;padding:12px 0;font-size:12px">';
-  html += '<button class="adm-btn adm-btn-outline adm-btn-sm" ' + (page <= 0 ? 'disabled' : '') + ' onclick="gTablePage=0;renderTable()">首页</button>';
-  html += '<button class="adm-btn adm-btn-outline adm-btn-sm" ' + (page <= 0 ? 'disabled' : '') + ' onclick="gTablePage--;renderTable()">上一页</button>';
+  html += '<button class="btn btn-outline btn-sm" ' + (page <= 0 ? 'disabled' : '') + ' onclick="gTablePage=0;renderTable()">首页</button>';
+  html += '<button class="btn btn-outline btn-sm" ' + (page <= 0 ? 'disabled' : '') + ' onclick="gTablePage--;renderTable()">上一页</button>';
   html += '<span style="color:var(--text-muted);margin:0 8px">第 ' + (page + 1) + '/' + total + ' 页（共 ' + totalRecords + ' 条）</span>';
-  html += '<button class="adm-btn adm-btn-outline adm-btn-sm" ' + (page >= total - 1 ? 'disabled' : '') + ' onclick="gTablePage++;renderTable()">下一页</button>';
-  html += '<button class="adm-btn adm-btn-outline adm-btn-sm" ' + (page >= total - 1 ? 'disabled' : '') + ' onclick="gTablePage=' + (total - 1) + ';renderTable()">末页</button>';
+  html += '<button class="btn btn-outline btn-sm" ' + (page >= total - 1 ? 'disabled' : '') + ' onclick="gTablePage++;renderTable()">下一页</button>';
+  html += '<button class="btn btn-outline btn-sm" ' + (page >= total - 1 ? 'disabled' : '') + ' onclick="gTablePage=' + (total - 1) + ';renderTable()">末页</button>';
   html += '</div>';
   pagination.innerHTML = html;
 }
@@ -573,7 +577,7 @@ function renderTeacherRanking() {
   const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : '-';
   const badge = (val) => {
     const n = Number(val); if (isNaN(n)) return '<span class="adm-badge">-</span>';
-    return '<span class="adm-badge ' + (n >= 7.5 ? 'adm-badge-high' : n >= 5 ? 'adm-badge-mid' : 'adm-badge-low') + '">' + n.toFixed(1) + '</span>';
+    return '<span class="badge ' + (n >= 7.5 ? 'badge-high' : n >= 5 ? 'badge-mid' : 'badge-low') + '">' + n.toFixed(1) + '</span>';
   };
 
   let html = '';
@@ -698,18 +702,19 @@ async function confirmClear(){
   if(!confirm('确定清空所有数据？不可恢复！'))return;
   if(!confirm('再次确认：清空全部 '+loadRecords().length+' 条？'))return;
 
-  // 1. 获取最新 SHA
+  let cleared = false;
   try {
     const r = await fetch(GH_API, {headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
     if (r.ok) {
       const j = await r.json();
-      // 2. 推送空数组
+      gDataSHA = j.sha;
       const content = utf8ToB64('[]');
-      await fetch(GH_API, {method:'PUT', headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'}, body:JSON.stringify({message:'clear all data', content, sha:j.sha, branch:'main'})});
+      const r2 = await fetch(GH_API, {method:'PUT', headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'}, body:JSON.stringify({message:'clear all data', content, sha:gDataSHA, branch:'main'})});
+      if(r2.ok){const j2=await r2.json();gDataSHA=j2.content.sha;cleared=true;}
     }
   } catch(e) {}
+  if(!cleared){showToast('远程清空失败，请检查网络后重试','warning');return;}
 
-  // 3. 清空本地 + 重新初始化
   localStorage.removeItem(DATA_KEY);
   showToast('已清空'); initDashboard();
 }
@@ -852,6 +857,7 @@ function renderRoundPanel() {
 }
 
 async function startNewRound() {
+  if (!roundInfo) { showToast('正在加载轮次信息，请稍后再试','warning'); return; }
   if (!confirm('确认开启新一轮填写？\n\n开启后，所有已填写过的学生将可以重新填写问卷。\n此操作不可撤销。')) return;
   if (!confirm('再次确认：开启第 ' + (roundInfo.round + 1) + ' 轮填写？')) return;
 
