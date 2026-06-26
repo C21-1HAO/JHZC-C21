@@ -739,16 +739,20 @@ function loadConfig() {
   return null;
 }
 
-// ==================== 防重复提交 ====================
+// ==================== 防重复提交 & 轮次管理 ====================
 const SUBMITTED_KEY = 'jhzc_survey_submitted';
+const ROUND_KEY = 'jhzc_survey_round';
+const ROUND_URL = 'https://raw.githubusercontent.com/C21-1HAO/JHZC-C21/main/data/survey_round.json';
 
+// 清除提交标记，允许重新填写
+function clearSubmitted() {
+  try { localStorage.removeItem(SUBMITTED_KEY); } catch {}
+  document.cookie = SUBMITTED_KEY + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/';
+}
+
+// 检查是否被锁定
 function isSubmitted() {
-  // localStorage 检查
-  try {
-    const flag = localStorage.getItem(SUBMITTED_KEY);
-    if (flag) return true;
-  } catch {}
-  // Cookie 检查（更持久）
+  try { if (localStorage.getItem(SUBMITTED_KEY)) return true; } catch {}
   if (document.cookie.indexOf(SUBMITTED_KEY + '=1') !== -1) return true;
   return false;
 }
@@ -756,12 +760,41 @@ function isSubmitted() {
 function markSubmitted() {
   const now = new Date().toLocaleString('zh-CN');
   try { localStorage.setItem(SUBMITTED_KEY, now); } catch {}
-  // 设置 Cookie，有效期 365 天
   const d = new Date(); d.setFullYear(d.getFullYear() + 1);
   document.cookie = SUBMITTED_KEY + '=1; expires=' + d.toUTCString() + '; path=/';
+  // 记录当前轮次
+  try { localStorage.setItem(ROUND_KEY, String(gCurrentRound || 1)); } catch {}
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+// 检查全局轮次，若已过期则自动解锁
+let gCurrentRound = 1;
+async function checkRoundAndUnlock() {
+  try {
+    const r = await fetch(ROUND_URL + '?t=' + Date.now());
+    if (!r.ok) return;
+    const data = await r.json();
+    gCurrentRound = data.round || 1;
+    const localRound = parseInt(localStorage.getItem(ROUND_KEY) || '0');
+    if (gCurrentRound > localRound) {
+      clearSubmitted();
+      localStorage.setItem(ROUND_KEY, String(gCurrentRound));
+    }
+  } catch (e) {}
+}
+
+// URL解锁参数
+(function () {
+  if (new URLSearchParams(window.location.search).get('unlock') === '1') {
+    clearSubmitted();
+    localStorage.removeItem(ROUND_KEY);
+    history.replaceState(null, '', window.location.pathname);
+  }
+})();
+
+document.addEventListener('DOMContentLoaded', async () => {
+  // 先检查轮次（可能自动解锁）
+  await checkRoundAndUnlock();
+
   // 检查是否已提交
   if (isSubmitted()) {
     document.querySelector('.container').style.display = 'none';
