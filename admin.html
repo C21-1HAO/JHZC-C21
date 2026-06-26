@@ -445,6 +445,17 @@ const SUBJECTS = ['静物','色彩','速写','头像'];
 
 function getConfig() { return loadConfig() || JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
 
+// 启动时从 GitHub 拉取配置
+(async function(){
+  if (loadConfig()) return;
+  try {
+    const r = await fetch('https://raw.githubusercontent.com/C21-1HAO/JHZC-C21/main/data/survey_config.json?t='+Date.now());
+    if (!r.ok) return;
+    const cfg = await r.json();
+    if (cfg && Object.keys(cfg).length > 0) localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
+  } catch(e) {}
+})();
+
 // ==================== Tabs ====================
 function switchTab(tab, btn) {
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
