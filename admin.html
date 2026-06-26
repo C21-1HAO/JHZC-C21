@@ -390,15 +390,25 @@ let gDataSHA = null, gSyncing = false;
 function utf8ToB64(str){const bytes=new TextEncoder().encode(str);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);}
 function b64ToUtf8(str){return new TextDecoder().decode(Uint8Array.from(atob(str),c=>c.charCodeAt(0)));}
 function loadRecords(){try{return JSON.parse(localStorage.getItem(DATA_KEY)||'[]');}catch{return[];}}
-function saveRecords(r){localStorage.setItem(DATA_KEY,JSON.stringify(r));syncPush(r);}
-async function syncPush(records){
+function saveRecords(r){localStorage.setItem(DATA_KEY,JSON.stringify(r));syncMergePush(r);}
+async function syncMergePush(records){
   if(gSyncing)return;gSyncing=true;
-  try{
-    if(!gDataSHA){const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});if(r.ok){const j=await r.json();gDataSHA=j.sha;}}
-    const content=utf8ToB64(JSON.stringify(records));
-    const r=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'update',content,sha:gDataSHA,branch:'main'})});
-    if(r.ok){const j=await r.json();gDataSHA=j.content.sha;}
-  }catch(e){}
+  for(let retry=0;retry<3;retry++){
+    try{
+      const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
+      if(!r.ok)break;
+      const j=await r.json();
+      const sha=j.sha;
+      let remote=JSON.parse(b64ToUtf8(j.content));
+      const remoteIds=new Set(remote.map(x=>x.id));
+      const newItems=records.filter(x=>!remoteIds.has(x.id));
+      if(newItems.length===0){gDataSHA=sha;break;}
+      remote=[...remote,...newItems];
+      const content=utf8ToB64(JSON.stringify(remote));
+      const r2=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'update',content,sha,branch:'main'})});
+      if(r2.ok){const j2=await r2.json();gDataSHA=j2.content.sha;localStorage.setItem(DATA_KEY,JSON.stringify(remote));break;}
+    }catch(e){if(retry===2)console.warn('Sync failed:',e.message);}
+  }
   gSyncing=false;
 }
 async function syncPull(){
