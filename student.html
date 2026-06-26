@@ -640,7 +640,7 @@ function submitForm() {
   const all = loadRecords();
   const ts = new Date().toLocaleString('zh-CN');
   const record = {
-    id: Date.now(), timestamp: ts, 班级: cls,
+    id: Date.now(), '提交时间': ts, 班级: cls,
     静物老师: subjectData['静物']?.teacher || '', 静物讲课: subjectData['静物']?.lecture || 0, 静物辅导: subjectData['静物']?.tutoring || 0, 静物点评: subjectData['静物']?.review || 0,
     色彩老师: subjectData['色彩']?.teacher || '', 色彩讲课: subjectData['色彩']?.lecture || 0, 色彩辅导: subjectData['色彩']?.tutoring || 0, 色彩点评: subjectData['色彩']?.review || 0,
     速写老师: subjectData['速写']?.teacher || '', 速写讲课: subjectData['速写']?.lecture || 0, 速写辅导: subjectData['速写']?.tutoring || 0, 速写点评: subjectData['速写']?.review || 0,
