@@ -171,14 +171,26 @@ tr:hover { background:#FFFDF5; }
 </head>
 <body>
 
+<!-- 登录 -->
+<div class="login-wrap" id="loginScreen">
+  <div class="login-card">
+    <h1>🔐 管理后台</h1>
+    <p>姜浩张超画室 · 学生反馈系统</p>
+    <input type="password" id="pwdInput" placeholder="请输入管理密码" autofocus>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="checkLogin()">进入后台</button>
+    <p style="font-size:11px;color:var(--text-muted);margin-top:16px">默认密码: JHZC2330</p>
+  </div>
+</div>
+
 <!-- 主界面 -->
-<div id="mainScreen">
+<div id="mainScreen" style="display:none">
 <div class="container">
   <div class="header">
     <div>
       <h1>姜浩张超画室 · 管理后台</h1>
       <div style="font-size:12px;color:var(--text-muted);margin-top:2px">学生反馈数据总览 & 问卷配置</div>
     </div>
+    <button class="btn btn-outline btn-sm" onclick="logout()">退出</button>
   </div>
 
   <!-- Tabs -->
@@ -206,13 +218,12 @@ tr:hover { background:#FFFDF5; }
     <div class="section">
       <div class="section-title">📋 提交记录</div>
       <div class="search-bar">
-        <input class="search-input" id="searchInput" placeholder="搜索 班级 / 老师名..." oninput="gTablePage=0;renderTable()">
+        <input class="search-input" id="searchInput" placeholder="搜索 班级 / 老师名..." oninput="renderTable()">
         <span style="font-size:12px;color:var(--text-muted);align-self:center" id="tableCount"></span>
         <button class="btn btn-primary btn-sm" onclick="forceRefresh()">🔄 刷新数据</button>
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">📤 导出CSV</button>
         <button class="btn btn-outline btn-sm" onclick="showImport()">📥 导入</button>
         <button class="btn btn-danger btn-sm" onclick="confirmClear()">🗑 清空</button>
-        <button class="btn btn-outline btn-sm" onclick="undoClear()" id="undoBtn" style="display:none">↩ 撤销清空</button>
       </div>
       <div class="table-wrap">
         <table id="dataTable"><thead><tr>
@@ -229,7 +240,6 @@ tr:hover { background:#FFFDF5; }
           <p>暂无数据</p><p style="font-size:12px">等待学生提交问卷后，数据将显示在此处</p>
         </div>
       </div>
-      <div id="pageNav"></div>
     </div>
   </div>
 
@@ -242,13 +252,30 @@ tr:hover { background:#FFFDF5; }
           <button class="btn btn-outline btn-sm" onclick="addClass()">+ 新增班级</button>
           <button class="btn btn-outline btn-sm" onclick="saveConfig()">💾 保存配置</button>
           <button class="btn btn-outline btn-sm" onclick="resetConfig()">🔄 恢复默认</button>
-          <button class="btn btn-outline btn-sm" onclick="undoConfig()" id="undoConfigBtn" style="display:none">↩ 撤销修改</button>
         </div>
       </div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
-        在此修改班级和老师信息，保存后即可生效。多个老师请用英文逗号分隔（如：周德涛,洪振中）。
+        在此修改班级和老师信息，保存后生成新的学生端链接。多个老师请用英文逗号分隔（如：周德涛,洪振中）。
       </p>
       <div id="configList"></div>
+    </div>
+
+    <!-- 生成链接 -->
+    <div class="section">
+      <div class="section-title">🔗 生成学生端链接</div>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
+        先点击上方"保存配置"，再点击下方"生成链接"。学生会通过此链接看到最新的班级和老师列表。
+      </p>
+      <div style="display:flex;gap:8px;margin-bottom:16px">
+        <button class="btn btn-primary" onclick="genStudentLink()">🔗 生成学生端链接</button>
+        <button class="btn btn-outline" onclick="genQRCode()">📱 生成二维码</button>
+        <button class="btn btn-outline" onclick="copyLink()">📋 复制链接</button>
+      </div>
+      <div class="link-box">
+        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">学生端链接：</span>
+        <span class="link-url" id="studentLink">尚未生成</span>
+      </div>
+      <div class="qr-wrap" id="qrCodeWrap" style="display:none"></div>
     </div>
   </div>
 
@@ -262,12 +289,12 @@ tr:hover { background:#FFFDF5; }
       </p>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
         <button class="btn btn-primary" onclick="startNewRound()">🔄 开启新一轮填写</button>
-        <button class="btn btn-outline" onclick="genTestLink()">🧪 生成无限填写测试链接</button>
+        <button class="btn btn-outline" onclick="genUnlockLink()">🔗 生成单设备解锁链接</button>
       </div>
-      <div class="link-box" id="testLinkBox" style="display:none">
-        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">测试链接（无限次填写）：</span>
-        <span class="link-url" id="testLinkUrl">--</span>
-        <button class="btn btn-outline btn-sm" onclick="copyTestLink()">📋 复制</button>
+      <div class="link-box" id="unlockLinkBox" style="display:none">
+        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">解锁链接：</span>
+        <span class="link-url" id="unlockUrl">--</span>
+        <button class="btn btn-outline btn-sm" onclick="copyUnlockLink()">📋 复制</button>
       </div>
     </div>
     <div class="section">
@@ -298,20 +325,29 @@ tr:hover { background:#FFFDF5; }
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
-// ==================== 初始化 ====================
-initDashboard();
-// 显示撤销按钮
-if (localStorage.getItem('jhzc_undo_backup')) {
-  setTimeout(() => { const b = document.getElementById('undoBtn'); if (b) b.style.display = 'inline-flex'; }, 500);
+// ==================== 密码 ====================
+const ADMIN_PWD = 'JHZC2330';
+function checkLogin() {
+  if (document.getElementById('pwdInput').value === ADMIN_PWD) {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainScreen').style.display = 'block';
+    initDashboard();
+  } else { showToast('密码错误','warning'); }
+}
+function logout() {
+  document.getElementById('mainScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('pwdInput').value = '';
 }
 
-// ==================== 自动加载测试数据 ====================
+// 自动加载测试数据
 function loadTestData() {
   const p = new URLSearchParams(window.location.search);
   if (!p.get('test')) return;
   const now = Date.now();
-  const classes = ['清央国定制班','定制班','超能1班','超能2班','超能3班','超重1班','火箭1班','火箭2班','新兴华侨','全能班','丰泰定制班','超能4班','超重2班','南海艺高'];
+  const classes = ['清央国定制班','定制班','超能1班','超能2班','超能3班','超重1班','火箭1班','火箭2班','新兴华侨','全能班','丰泰定制班','超能4班','超重2班','南海艺高','火箭2班'];
   const teachers = {
     静物: ['周中希','劳家斌','郑祖聪','朱传渠','何鸿海','谢维俊','吴泽鹏','叶文澎','张树华','罗屏','陈帆','李高技','蔡梦龙','何永强'],
     色彩: ['敖卓劲,孔何','周德涛,洪振中','李红亮','邓长征','鄢正端','陈晓东','李聪','梁天胜','冯世龙','苏海云','莫华荣','陈傲','谢贯通','陈淦全'],
@@ -325,7 +361,7 @@ function loadTestData() {
     const ci = i % classes.length;
     const ts = new Date(now - i * 1800000);
     const t = ts.getFullYear()+'/'+String(ts.getMonth()+1).padStart(2,'0')+'/'+String(ts.getDate()).padStart(2,'0')+' '+String(ts.getHours()).padStart(2,'0')+':'+String(ts.getMinutes()).padStart(2,'0')+':'+String(ts.getSeconds()).padStart(2,'0');
-    const rec = {id: now - i*1800000, '提交时间': t, 班级: classes[ci]};
+    const rec = {id: now - i*1800000, timestamp: t, 班级: classes[ci]};
     ['静物','色彩','速写','头像'].forEach(sub => {
       rec[sub+'老师'] = teachers[sub][ci];
       rec[sub+'讲课'] = Math.floor(Math.random()*7)+4;
@@ -372,9 +408,7 @@ async function syncMergePush(records){
   }
   gSyncing=false;
 }
-let syncPullLock = false;
 async function syncPull(){
-  if(syncPullLock)return;syncPullLock=true;
   try{
     const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});if(!r.ok)return;
     const j=await r.json();gDataSHA=j.sha;
@@ -385,9 +419,8 @@ async function syncPull(){
       window.dispatchEvent(new Event('data-updated'));
     }
   }catch(e){console.warn('Sync pull failed:',e.message);}
-  syncPullLock=false;
 }
-setTimeout(syncPull, 50);
+setInterval(syncPull,2000);setTimeout(syncPull,300);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
 function saveConfigToStorage(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
@@ -410,23 +443,7 @@ const DEFAULT_CONFIG = {
 };
 const SUBJECTS = ['静物','色彩','速写','头像'];
 
-function getConfig() {
-  const cfg = loadConfig();
-  if (cfg && typeof cfg === 'object' && Object.keys(cfg).length > 0) return cfg;
-  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
-}
-
-// 启动时从 GitHub 拉取配置到 localStorage
-(async function(){
-  const local = loadConfig();
-  if (local && typeof local === 'object' && Object.keys(local).length > 0) return;
-  try {
-    const r = await fetch('https://raw.githubusercontent.com/C21-1HAO/JHZC-C21/main/data/survey_config.json?t='+Date.now());
-    if (!r.ok) return;
-    const cfg = await r.json();
-    if (cfg && Object.keys(cfg).length > 0) localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
-  } catch(e) {}
-})();
+function getConfig() { return loadConfig() || JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
 
 // ==================== Tabs ====================
 function switchTab(tab, btn) {
@@ -435,8 +452,7 @@ function switchTab(tab, btn) {
   document.getElementById('tab-dashboard').style.display = tab==='dashboard'?'block':'none';
   document.getElementById('tab-config').style.display = tab==='config'?'block':'none';
   document.getElementById('tab-round').style.display = tab==='round'?'block':'none';
-  if (tab !== 'dashboard' && syncTimer) { clearInterval(syncTimer); syncTimer = null; }
-  if (tab === 'config') { renderConfigPanel(); showUndoConfigBtn(); }
+  if (tab === 'config') renderConfigPanel();
   if (tab === 'dashboard') initDashboard();
   if (tab === 'round') initRoundPanel();
 }
@@ -451,11 +467,9 @@ function showToast(msg, type) {
 }
 
 // ==================== 仪表盘 ====================
-let syncTimer = null;
 function initDashboard() {
   forceRefresh();
-  if (syncTimer) clearInterval(syncTimer);
-  syncTimer = setInterval(syncPull, 1000);
+  setInterval(syncPull, 2000);
 }
 
 let eventBound = false;
@@ -504,22 +518,13 @@ function renderStats() {
 function renderTable() {
   const records = loadRecords();
   const q = (document.getElementById('searchInput')?.value||'').toLowerCase();
-  const filtered = q?records.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q))).reverse():records.slice().reverse();
+  const filtered = q?records.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q))):records;
   document.getElementById('tableCount').textContent = '共 '+filtered.length+' 条';
   const empty = document.getElementById('emptyTable');
   const tbody = document.querySelector('#dataTable tbody');
-  if (!filtered.length) { tbody.innerHTML=''; empty.style.display='block'; renderPagination(0,0); return; }
+  if (!filtered.length) { tbody.innerHTML=''; empty.style.display='block'; return; }
   empty.style.display='none';
-
-  // 分页：每页 20 条
-  const pageSize = 20;
-  const totalPages = Math.ceil(filtered.length / pageSize);
-  gTablePage = Math.min(gTablePage, totalPages - 1);
-  gTablePage = Math.max(gTablePage, 0);
-  const start = gTablePage * pageSize;
-  const page = filtered.slice(start, start + pageSize);
-
-  tbody.innerHTML = page.map(r=>{
+  tbody.innerHTML = filtered.slice().reverse().map(r=>{
     const sb = s => { const n=Number(s); if(isNaN(n)||n<=0) return '<span class="badge">-</span>'; return '<span class="badge '+(n>=8?'badge-high':n>=5?'badge-mid':'badge-low')+'">'+n+'</span>'; };
     return '<tr>' +
       '<td>'+(r['提交时间']||'-')+'</td><td>'+(r['班级']||'-')+'</td>' +
@@ -530,22 +535,6 @@ function renderTable() {
       '<td>'+sb(r['饭菜评分'])+'</td><td>'+sb(r['饭堂服务评分'])+'</td><td>'+sb(r['宿舍管理评分'])+'</td><td>'+sb(r['宿管服务评分'])+'</td>' +
       '<td style="max-width:120px;overflow:hidden;text-overflow:ellipsis" title="'+(r['建议']||'')+'">'+(r['建议']||'-')+'</td></tr>';
   }).join('');
-
-  renderPagination(gTablePage, totalPages, filtered.length);
-}
-
-let gTablePage = 0;
-function renderPagination(page, total, totalRecords) {
-  const pagination = document.getElementById('pageNav');
-  if (total <= 1) { pagination.innerHTML = ''; return; }
-  let html = '<div style="display:flex;align-items:center;gap:6px;justify-content:center;padding:12px 0;font-size:12px">';
-  html += '<button class="btn btn-outline btn-sm" ' + (page <= 0 ? 'disabled' : '') + ' onclick="gTablePage=0;renderTable()">首页</button>';
-  html += '<button class="btn btn-outline btn-sm" ' + (page <= 0 ? 'disabled' : '') + ' onclick="gTablePage--;renderTable()">上一页</button>';
-  html += '<span style="color:var(--text-muted);margin:0 8px">第 ' + (page + 1) + '/' + total + ' 页（共 ' + totalRecords + ' 条）</span>';
-  html += '<button class="btn btn-outline btn-sm" ' + (page >= total - 1 ? 'disabled' : '') + ' onclick="gTablePage++;renderTable()">下一页</button>';
-  html += '<button class="btn btn-outline btn-sm" ' + (page >= total - 1 ? 'disabled' : '') + ' onclick="gTablePage=' + (total - 1) + ';renderTable()">末页</button>';
-  html += '</div>';
-  pagination.innerHTML = html;
 }
 
 function renderTeacherRanking() {
@@ -576,7 +565,7 @@ function renderTeacherRanking() {
   const avg = arr => arr.length ? (arr.reduce((a, b) => a + b, 0) / arr.length).toFixed(1) : '-';
   const badge = (val) => {
     const n = Number(val); if (isNaN(n)) return '<span class="adm-badge">-</span>';
-    return '<span class="badge ' + (n >= 7.5 ? 'badge-high' : n >= 5 ? 'badge-mid' : 'badge-low') + '">' + n.toFixed(1) + '</span>';
+    return '<span class="adm-badge ' + (n >= 7.5 ? 'adm-badge-high' : n >= 5 ? 'adm-badge-mid' : 'adm-badge-low') + '">' + n.toFixed(1) + '</span>';
   };
 
   let html = '';
@@ -617,42 +606,25 @@ function renderTeacherRanking() {
   });
 
   area.innerHTML = html;
+  document.getElementById('suggestEmpty').style.display = records.length ? 'none' : 'block';
 }
 
-// 建议汇总（层级折叠，分班级）
+// 建议汇总
 function renderSuggestions() {
   const records = loadRecords();
   const area = document.getElementById('suggestArea');
   const empty = document.getElementById('suggestEmpty');
-  if (!records.length) { empty.style.display = 'block'; area.innerHTML = ''; return; }
+  if (!records.length) { empty.style.display = 'block'; return; }
   const tips = records.filter(r => r['建议'] && r['建议'] !== '-' && r['建议'].trim());
   if (!tips.length) { empty.style.display = 'block'; area.innerHTML = ''; return; }
   empty.style.display = 'none';
 
-  // 按班级分组
-  const groups = {};
-  tips.forEach(r => {
-    const cls = r['班级'] || '未知';
-    if (!groups[cls]) groups[cls] = [];
-    groups[cls].push(r);
-  });
-  const clsSorted = Object.keys(groups).sort();
-
   let html = '';
-  clsSorted.forEach(cls => {
-    const items = groups[cls];
-    html += '<div class="config-class" style="margin-bottom:8px">';
-    html += '<div class="config-class-header" onclick="this.nextElementSibling.classList.toggle(\'open\')">';
-    html += '📘 ' + cls + ' <span style="font-size:11px;color:var(--text-muted);font-weight:400;margin-left:6px">' + items.length + ' 条建议</span>';
+  tips.reverse().forEach((r, i) => {
+    html += '<div style="padding:10px 14px;border-bottom:1px solid var(--border);' + (i % 2 === 0 ? 'background:#FFFDF5' : '') + '">';
+    html += '<span style="font-size:11px;color:var(--text-muted);margin-right:10px">' + (r['班级'] || '') + ' · ' + (r['提交时间'] || '') + '</span>';
+    html += '<span style="font-size:13px;color:var(--text)">' + r['建议'] + '</span>';
     html += '</div>';
-    html += '<div class="config-class-body">';
-    items.reverse().forEach((r, i) => {
-      html += '<div style="padding:8px 14px;border-bottom:1px solid var(--border);' + (i % 2 === 0 ? 'background:#FFFDF5' : '') + '">';
-      html += '<span style="font-size:10px;color:var(--text-muted);margin-right:8px">' + (r['提交时间'] || '') + '</span>';
-      html += '<span style="font-size:13px;color:var(--text)">' + r['建议'] + '</span>';
-      html += '</div>';
-    });
-    html += '</div></div>';
   });
   area.innerHTML = html;
 }
@@ -697,51 +669,10 @@ function importCSV(e){
   reader.readAsText(file,'UTF-8');e.target.value='';
 }
 function parseCSVLine(l){const r=[];let c='',q=false;for(let ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;}
-async function confirmClear(){
-  if(!confirm('确定清空所有学生填写数据（教师班级配置不受影响）？'))return;
+function confirmClear(){
+  if(!confirm('确定清空所有数据？不可恢复！'))return;
   if(!confirm('再次确认：清空全部 '+loadRecords().length+' 条？'))return;
-
-  // 备份当前数据
-  const current = loadRecords();
-  if (current.length > 0) {
-    localStorage.setItem('jhzc_undo_backup', JSON.stringify(current));
-  }
-
-  let cleared = false;
-  try {
-    const r = await fetch(GH_API, {headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
-    if (r.ok) {
-      const j = await r.json();
-      gDataSHA = j.sha;
-      const content = utf8ToB64('[]');
-      const r2 = await fetch(GH_API, {method:'PUT', headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'}, body:JSON.stringify({message:'clear all data', content, sha:gDataSHA, branch:'main'})});
-      if(r2.ok){const j2=await r2.json();gDataSHA=j2.content.sha;cleared=true;}
-    }
-  } catch(e) {}
-  if(!cleared){showToast('远程清空失败，请重试','warning');return;}
-
-  localStorage.removeItem(DATA_KEY);
-  document.getElementById('undoBtn').style.display = 'inline-flex';
-  showToast('已清空学生数据（可撤销）'); initDashboard();
-}
-
-async function undoClear() {
-  const backup = localStorage.getItem('jhzc_undo_backup');
-  if (!backup) { showToast('没有可恢复的数据','warning'); return; }
-  if (!confirm('恢复之前的数据？将覆盖当前数据。')) return;
-  const records = JSON.parse(backup);
-  const content = utf8ToB64(JSON.stringify(records));
-  try {
-    const r = await fetch(GH_API, {headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
-    if (r.ok) {
-      const j = await r.json();
-      await fetch(GH_API, {method:'PUT', headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'}, body:JSON.stringify({message:'undo clear', content, sha:j.sha, branch:'main'})});
-    }
-  } catch(e) {}
-  localStorage.setItem(DATA_KEY, backup);
-  localStorage.removeItem('jhzc_undo_backup');
-  document.getElementById('undoBtn').style.display = 'none';
-  showToast('数据已恢复'); initDashboard();
+  saveRecords([]);showToast('已清空');initDashboard();
 }
 
 // ==================== 问卷配置面板 ====================
@@ -813,11 +744,6 @@ function collectConfigFromDOM() {
 }
 
 function saveConfig() {
-  // 备份当前配置
-  const old = loadConfig();
-  if (old && Object.keys(old).length > 0) {
-    localStorage.setItem('jhzc_config_backup', JSON.stringify(old));
-  }
   const cfg = collectConfigFromDOM();
   saveConfigToStorage(cfg);
   showToast('配置已保存到本地');
@@ -828,34 +754,13 @@ function resetConfig() {
   saveConfigToStorage(DEFAULT_CONFIG);
   editingConfig = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
   renderConfigPanel();
-  document.getElementById('undoConfigBtn').style.display = 'none';
   showToast('已恢复默认配置');
 }
 
-function undoConfig() {
-  const backup = localStorage.getItem('jhzc_config_backup');
-  if (!backup) { showToast('没有可恢复的配置','warning'); return; }
-  if (!confirm('恢复到修改前的配置？')) return;
-  const cfg = JSON.parse(backup);
-  saveConfigToStorage(cfg);
-  editingConfig = cfg;
-  renderConfigPanel();
-  document.getElementById('undoConfigBtn').style.display = 'none';
-  showToast('配置已恢复');
-}
-
-// 配置页显示撤销按钮
-function showUndoConfigBtn() {
-  if (localStorage.getItem('jhzc_config_backup')) {
-    document.getElementById('undoConfigBtn').style.display = 'inline-flex';
-  }
-}
-
 function addClass() {
+  collectConfigFromDOM();
   const name = prompt('请输入新班级名称：');
   if (!name || !name.trim()) return;
-  // 从存储重新加载，不用 DOM 收集（避免空 DOM 覆盖已有配置）
-  editingConfig = getConfig();
   if (editingConfig[name.trim()]) { showToast('班级已存在','warning'); return; }
   const newCls = {};
   SUBJECTS.forEach(s => { newCls[s] = { teacher: '' }; });
@@ -908,7 +813,6 @@ function renderRoundPanel() {
 }
 
 async function startNewRound() {
-  if (!roundInfo) { showToast('正在加载轮次信息，请稍后再试','warning'); return; }
   if (!confirm('确认开启新一轮填写？\n\n开启后，所有已填写过的学生将可以重新填写问卷。\n此操作不可撤销。')) return;
   if (!confirm('再次确认：开启第 ' + (roundInfo.round + 1) + ' 轮填写？')) return;
 
@@ -928,25 +832,73 @@ async function startNewRound() {
   renderRoundPanel();
 }
 
-function genTestLink() {
+function genUnlockLink() {
   const base = window.location.href.replace(/admin\.html.*$/, 'student.html');
   const url = base + '?unlock=1';
-  document.getElementById('testLinkUrl').textContent = url;
-  document.getElementById('testLinkBox').style.display = 'flex';
-  showToast('测试链接已生成，打开后每次刷新页面可无限填写');
+  document.getElementById('unlockUrl').textContent = url;
+  document.getElementById('unlockLinkBox').style.display = 'flex';
+  const now = new Date().toLocaleString('zh-CN');
+  if (!roundInfo) roundInfo = { round: 1, history: [] };
+  roundInfo.history.push({ round: roundInfo.round, action: '生成单设备解锁链接', time: now, updated_by: 'admin' });
+  saveRoundLog();
+  showToast('解锁链接已生成，发给学生即可');
 }
 
-function copyTestLink() {
-  const url = document.getElementById('testLinkUrl').textContent;
+async function saveRoundLog() {
+  try {
+    if (!roundSHA) return;
+    const content = utf8ToB64(JSON.stringify(roundInfo));
+    const body = JSON.stringify({ message: 'update round log', content, sha: roundSHA, branch: 'main' });
+    const r = await fetch(ROUND_API, { method: 'PUT', headers: { Authorization: 'Bearer ' + GH_TOKEN, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body });
+    if (r.ok) { const j = await r.json(); roundSHA = j.content.sha; }
+  } catch (e) { }
+}
+
+function copyUnlockLink() {
+  const url = document.getElementById('unlockUrl').textContent;
   navigator.clipboard.writeText(url).then(() => showToast('已复制')).catch(() => {
-    const el = document.getElementById('testLinkUrl');
+    const el = document.getElementById('unlockUrl');
     const range = document.createRange(); range.selectNode(el);
     window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
     document.execCommand('copy'); showToast('已复制');
   });
 }
 
+// ==================== 生成学生链接 ====================
+let currentStudentLink = '';
+
+function genStudentLink() {
+  const cfg = loadConfig();
+  if (!cfg || !Object.keys(cfg).length) { showToast('请先保存配置','warning'); return; }
+  const json = JSON.stringify(cfg);
+  const encoded = btoa(encodeURIComponent(json));
+  const base = window.location.href.replace(/admin\.html.*$/, 'student.html');
+  currentStudentLink = base + '?c=' + encoded;
+  document.getElementById('studentLink').textContent = currentStudentLink;
+  showToast('链接已生成');
+}
+
+function genQRCode() {
+  if (!currentStudentLink) { showToast('请先生成链接','warning'); return; }
+  const wrap = document.getElementById('qrCodeWrap');
+  wrap.style.display = 'block';
+  wrap.innerHTML = '';
+  new QRCode(wrap, { text: currentStudentLink, width: 200, height: 200, colorDark: '#78350F', colorLight: '#FFFFFF' });
+  wrap.scrollIntoView({ behavior: 'smooth' });
+}
+
+function copyLink() {
+  if (!currentStudentLink) { showToast('请先生成链接','warning'); return; }
+  navigator.clipboard.writeText(currentStudentLink).then(() => showToast('已复制链接')).catch(() => {
+    const el = document.getElementById('studentLink');
+    const range = document.createRange(); range.selectNode(el);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+    document.execCommand('copy'); showToast('已复制链接');
+  });
+}
+
 // ==================== 键盘 ====================
+document.getElementById('pwdInput').addEventListener('keydown', e => { if(e.key==='Enter') checkLogin(); });
 </script>
 </body>
 </html>
