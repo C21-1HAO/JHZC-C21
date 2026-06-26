@@ -244,27 +244,9 @@ tr:hover { background:#FFFDF5; }
         </div>
       </div>
       <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
-        在此修改班级和老师信息，保存后生成新的学生端链接。多个老师请用英文逗号分隔（如：周德涛,洪振中）。
+        在此修改班级和老师信息，保存后即可生效。多个老师请用英文逗号分隔（如：周德涛,洪振中）。
       </p>
       <div id="configList"></div>
-    </div>
-
-    <!-- 生成链接 -->
-    <div class="section">
-      <div class="section-title">🔗 生成学生端链接</div>
-      <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
-        先点击上方"保存配置"，再点击下方"生成链接"。学生会通过此链接看到最新的班级和老师列表。
-      </p>
-      <div style="display:flex;gap:8px;margin-bottom:16px">
-        <button class="btn btn-primary" onclick="genStudentLink()">🔗 生成学生端链接</button>
-        <button class="btn btn-outline" onclick="genQRCode()">📱 生成二维码</button>
-        <button class="btn btn-outline" onclick="copyLink()">📋 复制链接</button>
-      </div>
-      <div class="link-box">
-        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap">学生端链接：</span>
-        <span class="link-url" id="studentLink">尚未生成</span>
-      </div>
-      <div class="qr-wrap" id="qrCodeWrap" style="display:none"></div>
     </div>
   </div>
 
@@ -314,7 +296,6 @@ tr:hover { background:#FFFDF5; }
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
 // ==================== 初始化 ====================
 initDashboard();
@@ -802,9 +783,10 @@ function resetConfig() {
 }
 
 function addClass() {
-  collectConfigFromDOM();
   const name = prompt('请输入新班级名称：');
   if (!name || !name.trim()) return;
+  // 从存储重新加载，不用 DOM 收集（避免空 DOM 覆盖已有配置）
+  editingConfig = getConfig();
   if (editingConfig[name.trim()]) { showToast('班级已存在','warning'); return; }
   const newCls = {};
   SUBJECTS.forEach(s => { newCls[s] = { teacher: '' }; });
@@ -892,39 +874,6 @@ function copyTestLink() {
     const range = document.createRange(); range.selectNode(el);
     window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
     document.execCommand('copy'); showToast('已复制');
-  });
-}
-
-// ==================== 生成学生链接 ====================
-let currentStudentLink = '';
-
-function genStudentLink() {
-  const cfg = loadConfig();
-  if (!cfg || !Object.keys(cfg).length) { showToast('请先保存配置','warning'); return; }
-  const json = JSON.stringify(cfg);
-  const encoded = btoa(encodeURIComponent(json));
-  const base = window.location.href.replace(/admin\.html.*$/, 'student.html');
-  currentStudentLink = base + '?c=' + encoded;
-  document.getElementById('studentLink').textContent = currentStudentLink;
-  showToast('链接已生成');
-}
-
-function genQRCode() {
-  if (!currentStudentLink) { showToast('请先生成链接','warning'); return; }
-  const wrap = document.getElementById('qrCodeWrap');
-  wrap.style.display = 'block';
-  wrap.innerHTML = '';
-  new QRCode(wrap, { text: currentStudentLink, width: 200, height: 200, colorDark: '#78350F', colorLight: '#FFFFFF' });
-  wrap.scrollIntoView({ behavior: 'smooth' });
-}
-
-function copyLink() {
-  if (!currentStudentLink) { showToast('请先生成链接','warning'); return; }
-  navigator.clipboard.writeText(currentStudentLink).then(() => showToast('已复制链接')).catch(() => {
-    const el = document.getElementById('studentLink');
-    const range = document.createRange(); range.selectNode(el);
-    window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
-    document.execCommand('copy'); showToast('已复制链接');
   });
 }
 
