@@ -29,6 +29,15 @@ body {
 .tab.active { color:var(--primary); border-bottom-color:var(--primary); }
 .tab:hover { color:var(--primary); }
 
+.sub-tabs { display:flex; gap:4px; margin-bottom:14px; align-items:center; flex-wrap:wrap; }
+.sub-tab {
+  padding:6px 16px; font-size:13px; font-weight:600; cursor:pointer;
+  border:1.5px solid var(--border); background:var(--card-bg); color:var(--text-muted);
+  border-radius:8px; font-family:inherit; transition:all 0.2s;
+}
+.sub-tab.active { background:var(--primary); color:#fff; border-color:var(--primary); }
+.sub-tab:hover:not(.active) { border-color:var(--primary); color:var(--primary); }
+
 /* Header */
 .header { display:flex; align-items:center; justify-content:space-between; padding:20px 0 12px; flex-wrap:wrap; gap:12px; }
 .header h1 { font-size:22px; font-weight:700; }
@@ -171,26 +180,14 @@ tr:hover { background:#FFFDF5; }
 </head>
 <body>
 
-<!-- 登录 -->
-<div class="login-wrap" id="loginScreen">
-  <div class="login-card">
-    <h1>🔐 管理后台</h1>
-    <p>姜浩张超画室 · 学生反馈系统</p>
-    <input type="password" id="pwdInput" placeholder="请输入管理密码" autofocus>
-    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:4px" onclick="checkLogin()">进入后台</button>
-    <p style="font-size:11px;color:var(--text-muted);margin-top:16px">默认密码: JHZC2330</p>
-  </div>
-</div>
-
-<!-- 主界面 -->
-<div id="mainScreen" style="display:none">
+<div id="mainScreen">
 <div class="container">
   <div class="header">
     <div>
       <h1>姜浩张超画室 · 管理后台</h1>
       <div style="font-size:12px;color:var(--text-muted);margin-top:2px">学生反馈数据总览 & 问卷配置</div>
     </div>
-    <button class="btn btn-outline btn-sm" onclick="logout()">退出</button>
+    <button class="btn btn-primary btn-sm" onclick="forceRefresh()">🔄 刷新数据</button>
   </div>
 
   <!-- Tabs -->
@@ -210,31 +207,34 @@ tr:hover { background:#FFFDF5; }
       </div>
     </div>
     <div class="section">
-      <div class="section-title">💬 学生建议汇总</div>
-      <div id="suggestArea">
-        <div class="empty-state" id="suggestEmpty"><p style="font-size:13px">暂无建议</p></div>
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-title">📋 提交记录</div>
-      <div class="search-bar">
-        <input class="search-input" id="searchInput" placeholder="搜索 班级 / 老师名..." oninput="renderTable()">
-        <span style="font-size:12px;color:var(--text-muted);align-self:center" id="tableCount"></span>
-        <button class="btn btn-primary btn-sm" onclick="forceRefresh()">🔄 刷新数据</button>
+      <div class="section-title">📋 学生反馈</div>
+      <div class="sub-tabs">
+        <button class="sub-tab active" onclick="switchSubTab('suggest',this)">💬 建议</button>
+        <button class="sub-tab" onclick="switchSubTab('records',this)">📊 记录</button>
+        <span style="font-size:12px;color:var(--text-muted);align-self:center;margin-left:auto" id="tableCount"></span>
         <button class="btn btn-outline btn-sm" onclick="exportCSV()">📤 导出CSV</button>
         <button class="btn btn-outline btn-sm" onclick="showImport()">📥 导入</button>
         <button class="btn btn-danger btn-sm" onclick="confirmClear()">🗑 清空</button>
       </div>
-      <div class="table-wrap">
-        <table id="dataTable"><thead><tr>
-          <th>提交时间</th><th>班级</th>
-          <th>静物老师</th><th>静物讲课</th><th>静物辅导</th><th>静物点评</th>
-          <th>色彩老师</th><th>色彩讲课</th><th>色彩辅导</th><th>色彩点评</th>
-          <th>速写老师</th><th>速写讲课</th><th>速写辅导</th><th>速写点评</th>
-          <th>头像老师</th><th>头像讲课</th><th>头像辅导</th><th>头像点评</th>
-          <th>饭菜</th><th>饭堂服务</th><th>宿舍管理</th><th>宿管服务</th>
-          <th>建议</th>
-        </tr></thead><tbody></tbody></table>
+      <div id="sub-suggest">
+        <div id="suggestArea">
+          <div class="empty-state" id="suggestEmpty"><p style="font-size:13px">暂无建议</p></div>
+        </div>
+      </div>
+      <div id="sub-records" style="display:none">
+        <div class="search-bar" style="margin:0 0 10px 0">
+          <input class="search-input" id="searchInput" placeholder="搜索 班级 / 老师名..." oninput="renderTable()">
+        </div>
+        <div class="table-wrap">
+          <table id="dataTable"><thead><tr>
+            <th>提交时间</th><th>班级</th>
+            <th>静物老师</th><th>静物讲课</th><th>静物辅导</th><th>静物点评</th>
+            <th>色彩老师</th><th>色彩讲课</th><th>色彩辅导</th><th>色彩点评</th>
+            <th>速写老师</th><th>速写讲课</th><th>速写辅导</th><th>速写点评</th>
+            <th>头像老师</th><th>头像讲课</th><th>头像辅导</th><th>头像点评</th>
+            <th>饭菜</th><th>饭堂服务</th><th>宿舍管理</th><th>宿管服务</th>
+            <th>建议</th>
+          </tr></thead><tbody></tbody></table>
         <div class="empty-state" id="emptyTable">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5m6 4.125l2.25 2.25m0 0l2.25 2.25M12 13.875l2.25-2.25M12 13.875l-2.25 2.25M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/></svg>
           <p>暂无数据</p><p style="font-size:12px">等待学生提交问卷后，数据将显示在此处</p>
@@ -329,18 +329,8 @@ tr:hover { background:#FFFDF5; }
 <script>
 // ==================== 密码 ====================
 const ADMIN_PWD = 'JHZC2330';
-function checkLogin() {
-  if (document.getElementById('pwdInput').value === ADMIN_PWD) {
-    document.getElementById('loginScreen').style.display = 'none';
-    document.getElementById('mainScreen').style.display = 'block';
-    initDashboard();
-  } else { showToast('密码错误','warning'); }
-}
-function logout() {
-  document.getElementById('mainScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
-  document.getElementById('pwdInput').value = '';
-}
+
+initDashboard();
 
 // 自动加载测试数据
 function loadTestData() {
@@ -466,6 +456,14 @@ function switchTab(tab, btn) {
   if (tab === 'config') renderConfigPanel();
   if (tab === 'dashboard') initDashboard();
   if (tab === 'round') initRoundPanel();
+}
+
+function switchSubTab(tab, btn) {
+  document.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('sub-suggest').style.display = tab==='suggest'?'block':'none';
+  document.getElementById('sub-records').style.display = tab==='records'?'block':'none';
+  if (tab === 'records') renderTable();
 }
 
 // ==================== Toast ====================
@@ -908,8 +906,6 @@ function copyLink() {
   });
 }
 
-// ==================== 键盘 ====================
-document.getElementById('pwdInput').addEventListener('keydown', e => { if(e.key==='Enter') checkLogin(); });
 </script>
 </body>
 </html>
