@@ -327,10 +327,6 @@ tr:hover { background:#FFFDF5; }
 
 <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
 <script>
-// ==================== 密码 ====================
-const ADMIN_PWD = 'JHZC2330';
-
-initDashboard();
 
 // 自动加载测试数据
 function loadTestData() {
@@ -410,7 +406,7 @@ async function syncPull(){
     }
   }catch(e){console.warn('Sync pull failed:',e.message);}
 }
-setInterval(syncPull,2000);setTimeout(syncPull,300);
+setTimeout(syncPull, 200);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
 function saveConfigToStorage(cfg) { localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg)); }
 
@@ -433,7 +429,11 @@ const DEFAULT_CONFIG = {
 };
 const SUBJECTS = ['静物','色彩','速写','头像'];
 
-function getConfig() { return loadConfig() || JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+function getConfig() {
+  const cfg = loadConfig();
+  if (cfg && typeof cfg === 'object' && !Array.isArray(cfg) && Object.keys(cfg).length > 0) return cfg;
+  return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+}
 
 // 启动时从 GitHub 拉取配置
 (async function(){
@@ -476,9 +476,11 @@ function showToast(msg, type) {
 }
 
 // ==================== 仪表盘 ====================
+let syncTimer = null;
 function initDashboard() {
   forceRefresh();
-  setInterval(syncPull, 2000);
+  if (syncTimer) clearInterval(syncTimer);
+  syncTimer = setInterval(syncPull, 1500);
 }
 
 let eventBound = false;
@@ -906,6 +908,8 @@ function copyLink() {
   });
 }
 
+// ==================== 启动 ====================
+initDashboard();
 </script>
 </body>
 </html>
