@@ -369,42 +369,46 @@ const DATA_KEY = 'jhzc_survey_records';
 const CONFIG_KEY = 'jhzc_survey_config';
 const GH_API = 'https://api.github.com/repos/C21-1HAO/JHZC-C21/contents/data/data.json';
 const GH_TOKEN = ['ghp','_V8yFRJiKJ7Ab','NVkQtmYxhSw','Vfz22oK1bVqqQ'].join('');
-let gDataSHA = null, gSyncing = false;
+let gDataCache = [], gDataSHA = null;
 function utf8ToB64(str){const bytes=new TextEncoder().encode(str);let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin);}
 function b64ToUtf8(str){return new TextDecoder().decode(Uint8Array.from(atob(str),c=>c.charCodeAt(0)));}
-function loadRecords(){try{return JSON.parse(localStorage.getItem(DATA_KEY)||'[]');}catch{return[];}}
-function saveRecords(r){localStorage.setItem(DATA_KEY,JSON.stringify(r));syncMergePush(r);}
-async function syncMergePush(records){
-  if(gSyncing)return;gSyncing=true;
+function loadRecords(){ return gDataCache; }
+
+// 从 GitHub 拉取数据
+let syncPullLock = false;
+async function syncPull(){
+  if(syncPullLock)return;syncPullLock=true;
+  try{
+    const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
+    if(!r.ok){syncPullLock=false;return;}
+    const j=await r.json();
+    gDataSHA=j.sha;
+    const remote=JSON.parse(b64ToUtf8(j.content));
+    if(remote.length!==gDataCache.length||JSON.stringify(remote)!==JSON.stringify(gDataCache)){
+      gDataCache=remote;
+      window.dispatchEvent(new Event('data-updated'));
+    }
+  }catch(e){}
+  syncPullLock=false;
+}
+
+// 直接推送数据到 GitHub（合并模式）
+async function pushToGitHub(records){
   for(let retry=0;retry<3;retry++){
     try{
       const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
-      if(!r.ok)break;
+      if(!r.ok)return false;
       const j=await r.json();
-      const sha=j.sha;
       let remote=JSON.parse(b64ToUtf8(j.content));
       const remoteIds=new Set(remote.map(x=>x.id));
       const newItems=records.filter(x=>!remoteIds.has(x.id));
-      if(newItems.length===0){gDataSHA=sha;break;}
       remote=[...remote,...newItems];
       const content=utf8ToB64(JSON.stringify(remote));
-      const r2=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'update',content,sha,branch:'main'})});
-      if(r2.ok){const j2=await r2.json();gDataSHA=j2.content.sha;localStorage.setItem(DATA_KEY,JSON.stringify(remote));break;}
-    }catch(e){if(retry===2)console.warn('Sync failed:',e.message);}
+      const r2=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'admin update',content,sha:j.sha,branch:'main'})});
+      if(r2.ok){const j2=await r2.json();gDataSHA=j2.content.sha;gDataCache=remote;return true;}
+    }catch(e){if(retry===2)return false;}
   }
-  gSyncing=false;
-}
-async function syncPull(){
-  try{
-    const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});if(!r.ok)return;
-    const j=await r.json();gDataSHA=j.sha;
-    const remote=JSON.parse(b64ToUtf8(j.content));
-    const local=loadRecords();
-    if(remote.length!==local.length||JSON.stringify(remote)!==JSON.stringify(local)){
-      localStorage.setItem(DATA_KEY,JSON.stringify(remote));
-      window.dispatchEvent(new Event('data-updated'));
-    }
-  }catch(e){console.warn('Sync pull failed:',e.message);}
+  return false;
 }
 setTimeout(syncPull, 200);
 function loadConfig() { try{return JSON.parse(localStorage.getItem(CONFIG_KEY)||'null');}catch{return null;} }
@@ -661,7 +665,7 @@ function doImport(){
   const text=document.getElementById('importText').value.trim();
   if(!text){showToast('请粘贴数据','warning');return;}
   try{const data=JSON.parse(text);if(!Array.isArray(data))throw new Error();
-    saveRecords([...loadRecords(),...data]);showToast('导入成功，共 '+(loadRecords().length)+' 条');hideImport();initDashboard();
+    pushToGitHub([...loadRecords(),...data]).then(ok=>{if(ok){syncPull().then(forceRefresh);showToast('导入成功');hideImport();}else showToast('导入失败','warning');});
   }catch{showToast('格式错误，需 JSON 数组','warning');}
 }
 function importCSV(e){
@@ -675,15 +679,24 @@ function importCSV(e){
       const vals=parseCSVLine(lines[i]);if(vals.length<headers.length)continue;
       const r={};headers.forEach((h,idx)=>{r[h]=vals[idx]||'';});records.push(r);
     }
-    saveRecords([...loadRecords(),...records]);showToast('CSV导入成功，共 '+records.length+' 条');initDashboard();
+    pushToGitHub([...loadRecords(),...records]).then(ok=>{if(ok){syncPull().then(forceRefresh);showToast('CSV导入成功，共 '+records.length+' 条');}else showToast('导入失败','warning');});
   };
   reader.readAsText(file,'UTF-8');e.target.value='';
 }
 function parseCSVLine(l){const r=[];let c='',q=false;for(let ch of l){if(ch==='"')q=!q;else if(ch===','&&!q){r.push(c.trim());c='';}else c+=ch;}r.push(c.trim());return r;}
-function confirmClear(){
+async function confirmClear(){
   if(!confirm('确定清空所有数据？不可恢复！'))return;
   if(!confirm('再次确认：清空全部 '+loadRecords().length+' 条？'))return;
-  saveRecords([]);showToast('已清空');initDashboard();
+  const content=utf8ToB64('[]');
+  try{
+    const r=await fetch(GH_API,{headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json'}});
+    if(r.ok){
+      const j=await r.json();
+      const r2=await fetch(GH_API,{method:'PUT',headers:{Authorization:'Bearer '+GH_TOKEN,Accept:'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({message:'clear all',content,sha:j.sha,branch:'main'})});
+      if(r2.ok){gDataCache=[];gDataSHA=j.sha;showToast('已清空');forceRefresh();return;}
+    }
+  }catch(e){}
+  showToast('清空失败，请重试','warning');
 }
 
 // ==================== 问卷配置面板 ====================
